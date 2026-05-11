@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Airline Ops Briefing Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg-deep:#040D18;--bg-primary:#081120;--bg-secondary:#0F172A;
+  --bg-card:rgba(15,23,42,0.75);--cyan:#00D9FF;--cyan-dim:rgba(0,217,255,0.12);
+  --cyan-glow:rgba(0,217,255,0.35);--red:#FF4D4D;--red-dim:rgba(255,77,77,0.13);
+  --amber:#FFB547;--amber-dim:rgba(255,181,71,0.13);--green:#4ADE80;--green-dim:rgba(74,222,128,0.13);
+  --blue:#60A5FA;--txt:#F0F4FF;--txt2:#8B9FC0;--txt3:#4A5A7A;
+  --bdr:rgba(0,217,255,0.1);--bdr2:rgba(0,217,255,0.25);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Rajdhani',sans-serif;background:var(--bg-deep);color:var(--txt)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(0,217,255,0.2);border-radius:2px}
+
+/* ── GRID BG ── */
+.bg-grid{position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:linear-gradient(rgba(0,217,255,0.025) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,217,255,0.025) 1px,transparent 1px);
+  background-size:50px 50px}
+.bg-glow{position:fixed;top:-200px;right:-200px;width:600px;height:600px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,217,255,0.04) 0%,transparent 70%);
+  pointer-events:none;z-index:0;animation:pGlow 8s ease-in-out infinite}
+@keyframes pGlow{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.1);opacity:1}}
+
+/* ═══════════ LOGIN ═══════════ */
+#loginPage{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:1000;background:#020810;overflow:hidden;transition:opacity .7s ease}
+.lBg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 50% 100%,rgba(0,80,120,0.28) 0%,transparent 60%),linear-gradient(180deg,#020810 0%,#051A30 100%)}
+.star{position:absolute;background:#fff;border-radius:50%;animation:twinkle var(--d,3s) ease-in-out infinite var(--dl,0s)}
+@keyframes twinkle{0%,100%{opacity:.8}50%{opacity:.1}}
+.rDot{width:5px;height:5px;border-radius:50%;background:var(--amber);
+  box-shadow:0 0 8px 2px rgba(255,181,71,0.5),-70px 0 0 var(--amber),-70px 0 6px 1px rgba(255,181,71,0.4),70px 0 0 var(--amber),70px 0 6px 1px rgba(255,181,71,0.4);
+  animation:blink 1.6s ease-in-out infinite}
+.rDot:nth-child(2n){animation-delay:.3s}.rDot:nth-child(3n){animation-delay:.6s}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.ac{position:absolute;font-size:32px;opacity:0;filter:drop-shadow(0 0 12px rgba(0,217,255,.35));animation:flyAc var(--dur,18s) linear infinite var(--del,0s)}
+@keyframes flyAc{0%{left:-80px;opacity:0}5%{opacity:.65}95%{opacity:.65}100%{left:calc(100vw + 80px);opacity:0}}
+.rCorner{position:absolute;top:24px;right:24px;width:88px;height:88px}
+.rRing{position:absolute;border-radius:50%;border:1px solid rgba(0,217,255,.18);top:50%;left:50%;transform:translate(-50%,-50%)}
+.rRing:nth-child(1){width:88px;height:88px}.rRing:nth-child(2){width:60px;height:60px;border-color:rgba(0,217,255,.28)}.rRing:nth-child(3){width:32px;height:32px;border-color:rgba(0,217,255,.45)}
+.rSwp{position:absolute;width:43px;height:1px;background:linear-gradient(90deg,transparent,rgba(0,217,255,.75));top:50%;left:50%;transform-origin:0 50%;animation:sweep 4s linear infinite;box-shadow:0 0 6px rgba(0,217,255,.5)}
+@keyframes sweep{to{transform:rotate(360deg)}}
+.rBlip{position:absolute;width:4px;height:4px;background:var(--cyan);border-radius:50%;box-shadow:0 0 5px var(--cyan);top:30%;left:62%;animation:blipF 4s 1s linear infinite}
+@keyframes blipF{0%,100%{opacity:0}25%{opacity:1}50%{opacity:.25}}
+.ptcl{position:absolute;width:2px;height:2px;background:rgba(0,217,255,.55);border-radius:50%;animation:fltP var(--d) ease-in-out infinite var(--dl);left:var(--x);top:var(--y)}
+@keyframes fltP{0%,100%{transform:translateY(0);opacity:.55}50%{transform:translateY(-18px);opacity:.1}}
+.ticker{position:absolute;bottom:0;left:0;right:0;height:34px;background:rgba(0,0,0,.5);border-top:1px solid rgba(0,217,255,.15);display:flex;align-items:center;overflow:hidden}
+.tLabel{background:var(--cyan);color:#000;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;padding:0 12px;height:100%;display:flex;align-items:center;flex-shrink:0;letter-spacing:1px}
+.tContent{display:flex;animation:tScroll 38s linear infinite;white-space:nowrap;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--txt2)}
+.tItem{padding:0 30px;display:flex;align-items:center;gap:7px}
+.td{width:5px;height:5px;border-radius:50%;background:var(--amber)}
+.td.r{background:var(--red)}.td.g{background:var(--green)}
+@keyframes tScroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+.hGlow{position:absolute;bottom:18%;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,217,255,.18),rgba(255,181,71,.25),rgba(0,217,255,.18),transparent)}
+
+/* Login Card */
+.lCard{position:relative;z-index:10;width:450px;background:rgba(8,17,32,.82);backdrop-filter:blur(24px);border:1px solid rgba(0,217,255,.18);border-radius:16px;padding:38px;box-shadow:0 0 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(0,217,255,.08);animation:cardIn .9s ease-out}
+@keyframes cardIn{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+.lLogo{display:flex;align-items:center;justify-content:center;gap:11px;margin-bottom:22px}
+.lLogoIcon{width:44px;height:44px;background:rgba(0,217,255,.08);border:1px solid rgba(0,217,255,.35);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 0 18px rgba(0,217,255,.18)}
+.lLogoTxt{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--cyan);line-height:1.4}
+.lTitle{font-family:'Orbitron',monospace;font-size:18px;font-weight:700;text-align:center;color:#fff;margin-bottom:5px;line-height:1.35}
+.lSub{font-size:12px;text-align:center;color:var(--txt2);margin-bottom:22px}
+.divL{height:1px;background:linear-gradient(90deg,transparent,rgba(0,217,255,.28),transparent);margin-bottom:22px}
+.lTabs{display:flex;gap:8px;margin-bottom:20px}
+.lTab{flex:1;padding:9px;background:rgba(0,217,255,.04);border:1px solid rgba(0,217,255,.12);border-radius:8px;font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--txt2);cursor:pointer;transition:all .25s;text-align:center}
+.lTab.on{background:rgba(0,217,255,.12);border-color:rgba(0,217,255,.4);color:var(--cyan);box-shadow:0 0 12px rgba(0,217,255,.1)}
+.err{color:var(--red);font-size:12px;margin-bottom:10px;display:none;padding:8px 12px;background:var(--red-dim);border-radius:6px;border:1px solid rgba(255,77,77,.18)}
+.iGrp{margin-bottom:16px}
+.iLbl{font-family:'Orbitron',monospace;font-size:8px;font-weight:600;letter-spacing:2px;color:var(--txt2);margin-bottom:6px;display:block}
+.iWr{position:relative}
+.iIco{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;opacity:.5;pointer-events:none}
+.iF{width:100%;background:rgba(0,217,255,.03);border:1px solid rgba(0,217,255,.14);border-radius:7px;padding:11px 14px 11px 40px;color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:500;outline:none;transition:all .3s}
+.iF:focus{border-color:rgba(0,217,255,.45);background:rgba(0,217,255,.05);box-shadow:0 0 0 3px rgba(0,217,255,.07)}
+.iF::placeholder{color:var(--txt3)}
+.lEx{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.chk{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--txt2);cursor:pointer}
+.chk input{accent-color:var(--cyan)}
+.fgt{font-size:11px;color:var(--cyan);text-decoration:none;opacity:.7;font-family:'Orbitron',monospace;letter-spacing:1px}
+.lBtn{width:100%;padding:13px;background:linear-gradient(135deg,rgba(0,217,255,.17),rgba(0,170,200,.12));border:1px solid rgba(0,217,255,.38);border-radius:7px;color:var(--cyan);font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:3px;cursor:pointer;transition:all .3s}
+.lBtn:hover{box-shadow:0 0 28px rgba(0,217,255,.28);border-color:rgba(0,217,255,.65);transform:translateY(-1px)}
+.lBtn:disabled{opacity:.6;pointer-events:none}
+.clrBdg{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:16px;padding:7px;border-radius:5px;background:rgba(255,77,77,.04);border:1px solid rgba(255,77,77,.1)}
+.clrBdg span{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:2px;color:rgba(255,77,77,.6)}
+
+/* ═══════════ APP SHELL ═══════════ */
+#app{display:none;height:100vh;flex-direction:column;position:relative;z-index:1}
+
+/* NAVBAR */
+.nav{height:58px;background:rgba(8,17,32,.95);backdrop-filter:blur(20px);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;position:relative;z-index:200}
+.nav::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,rgba(0,217,255,.22),transparent)}
+.nLogo{display:flex;align-items:center;gap:9px;flex-shrink:0;cursor:pointer}
+.nLogoIco{width:34px;height:34px;background:rgba(0,217,255,.08);border:1px solid rgba(0,217,255,.28);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.nLogoT{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;color:var(--cyan);letter-spacing:1px;line-height:1.2}
+.nLogoS{font-family:'Rajdhani',sans-serif;font-size:9px;color:var(--txt3);letter-spacing:2px}
+.nDiv{width:1px;height:28px;background:var(--bdr);flex-shrink:0}
+/* Search */
+.nSrch{position:relative;flex:1;max-width:280px}
+.nSrch input{width:100%;background:rgba(0,217,255,.03);border:1px solid rgba(0,217,255,.1);border-radius:6px;padding:7px 12px 7px 30px;color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;transition:all .3s}
+.nSrch input:focus{border-color:rgba(0,217,255,.28);box-shadow:0 0 12px rgba(0,217,255,.07)}
+.nSrch::before{content:'⌕';position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--txt3);font-size:15px;pointer-events:none}
+.srchDd{position:absolute;top:calc(100% + 6px);left:0;right:0;background:rgba(8,17,32,.98);border:1px solid var(--bdr2);border-radius:8px;overflow:hidden;display:none;z-index:500;box-shadow:0 8px 32px rgba(0,0,0,.5)}
+.srchDd.open{display:block}
+.srRes{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(0,217,255,.05);transition:background .2s}
+.srRes:hover{background:rgba(0,217,255,.06)}
+.srType{font-family:'Orbitron',monospace;font-size:8px;padding:2px 6px;border-radius:3px;background:var(--cyan-dim);color:var(--cyan);letter-spacing:1px;flex-shrink:0}
+.srTxt{font-size:13px;color:var(--txt2)}
+.srTxt mark{background:rgba(0,217,255,.2);color:var(--cyan);border-radius:2px;padding:0 2px}
+.nSp{flex:1}
+.wBdg{display:flex;align-items:center;gap:7px;padding:5px 10px;background:rgba(0,217,255,.04);border:1px solid rgba(0,217,255,.1);border-radius:18px;font-family:'Rajdhani',sans-serif;font-size:12px;color:var(--txt2);flex-shrink:0}
+.wBdg .temp{color:var(--cyan);font-weight:600}
+.nClk{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--cyan);letter-spacing:1px;padding:5px 10px;background:rgba(0,217,255,.04);border:1px solid rgba(0,217,255,.1);border-radius:6px;flex-shrink:0}
+.nBtn{width:34px;height:34px;background:rgba(0,217,255,.04);border:1px solid rgba(0,217,255,.1);border-radius:7px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;transition:all .3s;color:var(--txt2);position:relative;flex-shrink:0}
+.nBtn:hover{background:rgba(0,217,255,.1);border-color:rgba(0,217,255,.28);color:var(--cyan)}
+.nBdg{position:absolute;top:3px;right:3px;width:7px;height:7px;background:var(--red);border-radius:50%;border:1px solid var(--bg-deep);animation:pRed 1.5s ease-in-out infinite}
+@keyframes pRed{0%,100%{box-shadow:0 0 0 0 rgba(255,77,77,.5)}50%{box-shadow:0 0 0 4px rgba(255,77,77,0)}}
+.stormBtn{display:flex;align-items:center;gap:7px;padding:7px 13px;background:rgba(255,77,77,.07);border:1px solid rgba(255,77,77,.28);border-radius:7px;cursor:pointer;font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--red);transition:all .3s;flex-shrink:0}
+.stormBtn:hover{background:rgba(255,77,77,.14);box-shadow:0 0 18px rgba(255,77,77,.18)}
+.stormBtn.active{background:rgba(255,77,77,.2);box-shadow:0 0 22px rgba(255,77,77,.28)}
+.profBtn{display:flex;align-items:center;gap:8px;padding:4px 10px 4px 4px;background:rgba(0,217,255,.04);border:1px solid rgba(0,217,255,.1);border-radius:18px;cursor:pointer;transition:all .3s;flex-shrink:0;position:relative}
+.profBtn:hover{background:rgba(0,217,255,.09);border-color:rgba(0,217,255,.28)}
+.profAv{width:26px;height:26px;background:linear-gradient(135deg,var(--cyan),rgba(0,120,180,1));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#000}
+.profNm{font-family:'Rajdhani',sans-serif;font-size:12px;font-weight:600;color:var(--txt2)}
+
+/* Dropdowns */
+.dp{position:absolute;top:calc(100% + 8px);right:0;min-width:300px;background:rgba(8,17,32,.98);border:1px solid var(--bdr2);border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,.6);display:none;z-index:500;overflow:hidden;animation:dpIn .2s ease-out}
+@keyframes dpIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.dp.open{display:block}
+.dpH{padding:12px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.dpT{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--cyan)}
+.dpX{cursor:pointer;color:var(--txt3);font-size:20px;line-height:1;transition:color .2s}.dpX:hover{color:var(--txt)}
+.dpB{max-height:360px;overflow-y:auto;padding:8px}
+.dpF{padding:10px 14px;border-top:1px solid var(--bdr)}
+.nfItem{padding:10px;border-radius:7px;border-left:3px solid;background:rgba(15,23,42,.5);margin-bottom:6px;cursor:pointer;transition:background .2s}
+.nfItem:hover{background:rgba(15,23,42,.9)}
+.nfItem.read{opacity:.45}
+.nfItem.critical{border-color:var(--red)}.nfItem.warning{border-color:var(--amber)}.nfItem.info{border-color:var(--cyan)}.nfItem.success{border-color:var(--green)}
+.nfType{font-family:'Orbitron',monospace;font-size:7px;font-weight:700;letter-spacing:1px;padding:2px 5px;border-radius:3px}
+.nfItem.critical .nfType{color:var(--red);background:var(--red-dim)}.nfItem.warning .nfType{color:var(--amber);background:var(--amber-dim)}.nfItem.info .nfType{color:var(--cyan);background:var(--cyan-dim)}.nfItem.success .nfType{color:var(--green);background:var(--green-dim)}
+.nfMsg{font-size:12px;color:var(--txt2);margin-top:3px;line-height:1.4}
+.nfTime{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt3);margin-top:3px}
+.pItem{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:9px;transition:background .2s;border-radius:6px;color:var(--txt2);font-size:13px}
+.pItem:hover{background:rgba(0,217,255,.06);color:var(--txt)}
+.pItem.danger{color:var(--red)}.pItem.danger:hover{background:var(--red-dim)}
+
+/* BODY */
+.appBody{display:flex;flex:1;overflow:hidden;position:relative;z-index:1}
+
+/* SIDEBAR */
+.sb{width:58px;background:rgba(8,17,32,.95);backdrop-filter:blur(20px);border-right:1px solid var(--bdr);display:flex;flex-direction:column;padding:14px 0;gap:2px;transition:width .3s cubic-bezier(.4,0,.2,1);overflow:hidden;flex-shrink:0;z-index:100}
+.sb:hover{width:210px}
+.sbi{display:flex;align-items:center;gap:11px;padding:10px 17px;cursor:pointer;transition:all .25s;position:relative;white-space:nowrap;color:var(--txt3)}
+.sbi:hover{background:rgba(0,217,255,.05);color:var(--cyan)}
+.sbi.on{background:rgba(0,217,255,.07);color:var(--cyan)}
+.sbi.on::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--cyan);box-shadow:0 0 8px var(--cyan)}
+.sbIco{font-size:18px;flex-shrink:0;width:22px;text-align:center;transition:filter .25s}
+.sbi.on .sbIco,.sbi:hover .sbIco{filter:drop-shadow(0 0 5px var(--cyan))}
+.sbLbl{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;letter-spacing:.4px;opacity:0;transition:opacity .15s;pointer-events:none}
+.sb:hover .sbLbl{opacity:1}
+.sbSp{flex:1}
+.sbDiv{height:1px;background:var(--bdr);margin:8px 10px;flex-shrink:0}
+
+/* PAGES */
+.mainArea{flex:1;display:flex;overflow:hidden}
+.pg{flex:1;overflow-y:auto;padding:18px;display:none;flex-direction:column;gap:14px;animation:pgIn .3s ease-out}
+.pg.on{display:flex}
+@keyframes pgIn{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:translateX(0)}}
+
+/* RIGHT PANEL */
+.rPanel{width:270px;background:rgba(8,17,32,.95);backdrop-filter:blur(20px);border-left:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0}
+.rpH{padding:13px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+.rpCnt{background:var(--red);color:#fff;font-family:'Orbitron',monospace;font-size:9px;padding:2px 5px;border-radius:8px}
+.alList{flex:1;overflow-y:auto;padding:10px}
+.alCard{padding:10px;border-radius:7px;border-left:3px solid;background:rgba(15,23,42,.55);animation:alIn .35s ease-out;cursor:pointer;transition:background .2s;margin-bottom:7px}
+.alCard:hover{background:rgba(15,23,42,.9)}
+@keyframes alIn{from{transform:translateX(16px);opacity:0}to{transform:translateX(0);opacity:1}}
+.alCard.critical{border-color:var(--red)}.alCard.warning{border-color:var(--amber)}.alCard.info{border-color:var(--cyan)}.alCard.success{border-color:var(--green)}
+.alH{display:flex;align-items:center;gap:7px;margin-bottom:3px}
+.alT{font-family:'Orbitron',monospace;font-size:7px;font-weight:700;letter-spacing:1px;padding:2px 5px;border-radius:3px}
+.alCard.critical .alT{color:var(--red);background:var(--red-dim)}.alCard.warning .alT{color:var(--amber);background:var(--amber-dim)}.alCard.info .alT{color:var(--cyan);background:var(--cyan-dim)}.alCard.success .alT{color:var(--green);background:var(--green-dim)}
+.alTime{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt3);margin-left:auto}
+.alMsg{font-size:11px;color:var(--txt2);line-height:1.4}
+.alDot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.alCard.critical .alDot{background:var(--red)}.alCard.warning .alDot{background:var(--amber)}.alCard.info .alDot{background:var(--cyan)}.alCard.success .alDot{background:var(--green)}
+/* Map section */
+.mapWr{padding:11px;border-top:1px solid var(--bdr)}
+.miniMap{background:rgba(0,0,0,.28);border-radius:7px;height:160px;position:relative;overflow:hidden}
+.fDot{position:absolute;width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:0 0 7px var(--cyan);transform:translate(-50%,-50%)}
+.fDot::after{content:'';position:absolute;inset:-4px;border-radius:50%;border:1px solid rgba(0,217,255,.3);animation:ripple 2s ease-out infinite var(--del,0s)}
+@keyframes ripple{to{transform:scale(3.5);opacity:0}}
+.fPath{position:absolute;pointer-events:none}
+/* Moving aircraft on map */
+.mapAc{position:absolute;font-size:10px;color:var(--cyan);transform:translate(-50%,-50%);filter:drop-shadow(0 0 4px var(--cyan));animation:moveAc var(--dur,8s) linear infinite var(--del,0s);pointer-events:auto;cursor:pointer}
+
+/* SECTION HEADERS */
+.sH{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-shrink:0}
+.sT{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--cyan);display:flex;align-items:center;gap:9px}
+.sT::before{content:'';width:3px;height:14px;background:var(--cyan);border-radius:2px;box-shadow:0 0 7px var(--cyan)}
+.bdg{font-family:'Orbitron',monospace;font-size:8px;padding:3px 8px;border-radius:8px;font-weight:700;letter-spacing:1px}
+.bLive{color:var(--green);background:var(--green-dim);border:1px solid rgba(74,222,128,.18);animation:lPulse 2s ease-in-out infinite}
+.bWarn{color:var(--amber);background:var(--amber-dim);border:1px solid rgba(255,181,71,.18)}
+.bInfo{color:var(--cyan);background:var(--cyan-dim);border:1px solid rgba(0,217,255,.18)}
+.bRed{color:var(--red);background:var(--red-dim);border:1px solid rgba(255,77,77,.18);animation:lPulse 1s ease-in-out infinite}
+@keyframes lPulse{0%,100%{opacity:1}50%{opacity:.55}}
+
+/* CARD */
+.card{background:var(--bg-card);backdrop-filter:blur(14px);border:1px solid var(--bdr);border-radius:11px;padding:14px;transition:border-color .25s}
+.card:hover{border-color:var(--bdr2)}
+
+/* KPI */
+.kpiGrid{display:grid;grid-template-columns:repeat(6,1fr);gap:11px}
+.kpiC{background:var(--bg-card);backdrop-filter:blur(14px);border:1px solid var(--bdr);border-radius:11px;padding:14px;position:relative;overflow:hidden;cursor:pointer;transition:all .25s}
+.kpiC:hover{border-color:var(--bdr2);box-shadow:0 0 24px rgba(0,217,255,.06);transform:translateY(-2px)}
+.kpiIco{font-size:22px;margin-bottom:8px;display:block}
+.kpiV{font-family:'Orbitron',monospace;font-size:26px;font-weight:700;color:#fff;line-height:1;margin-bottom:3px}
+.kpiL{font-family:'Rajdhani',sans-serif;font-size:10px;font-weight:600;color:var(--txt3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
+.kpiTr{display:flex;align-items:center;gap:5px;font-family:'Rajdhani',sans-serif;font-size:11px;font-weight:600}
+.tUp{color:var(--green)}.tDn{color:var(--red)}.tWn{color:var(--amber)}
+.mBar{height:3px;border-radius:2px;margin-top:8px;overflow:hidden;background:rgba(255,255,255,.04)}
+.mBarF{height:100%;border-radius:2px;animation:fillIn 1.5s ease-out}
+@keyframes fillIn{from{width:0}}
+
+/* FLIGHT TABLE */
+.ftWr{border-radius:11px;overflow:hidden;border:1px solid var(--bdr);background:var(--bg-card)}
+.ft{width:100%;border-collapse:collapse}
+.ft th{padding:9px 13px;font-family:'Orbitron',monospace;font-size:7px;font-weight:600;letter-spacing:2px;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left;background:rgba(0,0,0,.18)}
+.ft td{padding:10px 13px;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:500;color:var(--txt2);border-bottom:1px solid rgba(0,217,255,.04);vertical-align:middle}
+.ft tr:hover td{background:rgba(0,217,255,.025);color:var(--txt)}
+.ft tr{cursor:pointer;animation:rowIn .35s ease-out both}
+@keyframes rowIn{from{opacity:0;transform:translateX(-8px)}to{opacity:1;transform:translateX(0)}}
+.fId{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--cyan)}
+.sp{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:18px;font-family:'Orbitron',monospace;font-size:7px;font-weight:700;letter-spacing:1px}
+.sB{color:var(--green);background:var(--green-dim);border:1px solid rgba(74,222,128,.18)}
+.sD{color:var(--amber);background:var(--amber-dim);border:1px solid rgba(255,181,71,.18);animation:bW 1.2s ease-in-out infinite}
+.sCo{color:var(--red);background:var(--red-dim);border:1px solid rgba(255,77,77,.18);animation:bR .9s ease-in-out infinite}
+.sT2{color:var(--blue);background:rgba(96,165,250,.1);border:1px solid rgba(96,165,250,.18)}
+.sDp{color:var(--txt3);background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)}
+.sSc{color:var(--cyan);background:var(--cyan-dim);border:1px solid rgba(0,217,255,.18)}
+@keyframes bW{0%,100%{opacity:1}50%{opacity:.45}}
+@keyframes bR{0%,100%{opacity:1}50%{opacity:.35}}
+.crBar{display:flex;align-items:center;gap:5px}
+.crTr{flex:1;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden;max-width:54px}
+.crFl{height:100%;border-radius:2px}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+
+/* GATE */
+.gGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.gCell{background:rgba(15,23,42,.55);border:1px solid rgba(0,217,255,.07);border-radius:7px;padding:9px;transition:all .25s;cursor:pointer;position:relative;overflow:hidden}
+.gCell:hover{border-color:rgba(0,217,255,.25)}
+.gL{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;margin-bottom:3px}
+.gF{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt3);margin-bottom:5px}
+.gBar{height:3px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden}
+.gBarF{height:100%;border-radius:2px;transition:width .5s ease}
+.gOcc{border-color:rgba(74,222,128,.18)}.gOcc .gL{color:var(--green)}.gOcc .gBarF{background:var(--green)}
+.gBrd{border-color:rgba(0,217,255,.18)}.gBrd .gL{color:var(--cyan)}.gBrd .gBarF{background:var(--cyan)}
+.gCon{border-color:rgba(255,77,77,.4)!important;animation:conPulse 1s ease-in-out infinite}
+.gCon .gL{color:var(--red)}.gCon .gBarF{background:var(--red)}
+@keyframes conPulse{0%,100%{box-shadow:0 0 0 0 rgba(255,77,77,.25)}50%{box-shadow:0 0 12px 3px rgba(255,77,77,.08)}}
+.gEm .gL{color:var(--txt3)}.gCBdg{position:absolute;top:5px;right:5px;font-size:9px;animation:bR .6s infinite}
+
+/* WEATHER */
+.wMets{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}
+.wM{background:rgba(0,0,0,.18);border:1px solid rgba(0,217,255,.05);border-radius:7px;padding:9px;text-align:center}
+.wV{font-family:'Orbitron',monospace;font-size:17px;font-weight:700;margin-bottom:2px}
+.wLb{font-family:'Rajdhani',sans-serif;font-size:9px;letter-spacing:1px;color:var(--txt3);text-transform:uppercase}
+
+/* HEATMAP */
+.hmRow{display:flex;gap:4px;align-items:center;margin-bottom:4px}
+.hmLbl{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt3);width:28px;flex-shrink:0}
+.hmCell{flex:1;height:26px;border-radius:4px;cursor:pointer;transition:transform .2s;position:relative}
+.hmCell:hover{transform:scale(1.08);z-index:2}
+.hmTimes{display:flex;gap:4px;margin-left:32px;margin-bottom:5px}
+.hmTL{flex:1;text-align:center;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--txt3)}
+
+/* AI CARD */
+.aiCard{background:linear-gradient(135deg,rgba(0,217,255,.04),rgba(0,80,150,.09));border:1px solid rgba(0,217,255,.18);border-radius:11px;padding:14px;position:relative;overflow:hidden}
+.aiCard::before{content:'';position:absolute;top:-40px;right:-40px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle,rgba(0,217,255,.06) 0%,transparent 70%)}
+.aiBdg{display:inline-flex;align-items:center;gap:5px;background:rgba(0,217,255,.09);border:1px solid rgba(0,217,255,.18);border-radius:18px;padding:3px 9px;font-family:'Orbitron',monospace;font-size:8px;color:var(--cyan);letter-spacing:1px;margin-bottom:10px}
+.aiRisk{font-family:'Orbitron',monospace;font-size:36px;font-weight:800;color:var(--amber);line-height:1;margin-bottom:3px;text-shadow:0 0 25px rgba(255,181,71,.35)}
+.aiRLbl{font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--txt2);letter-spacing:1px;margin-bottom:11px}
+.rBar{height:5px;background:rgba(255,255,255,.04);border-radius:3px;overflow:hidden;margin-bottom:9px}
+.rBarF{height:100%;background:linear-gradient(90deg,var(--green),var(--amber),var(--red));border-radius:3px;animation:fillIn 1.5s ease-out}
+.aiFact{display:flex;align-items:center;justify-content:space-between;font-family:'Rajdhani',sans-serif;font-size:11px;color:var(--txt2);margin-bottom:5px}
+.aiFBar{width:72px;height:3px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden}
+
+/* STAFF */
+.stRow{display:flex;align-items:center;gap:9px;padding:9px 11px;background:rgba(0,0,0,.18);border:1px solid rgba(0,217,255,.04);border-radius:7px;transition:all .25s;cursor:pointer;margin-bottom:6px}
+.stRow:hover{background:rgba(0,217,255,.03);border-color:rgba(0,217,255,.1)}
+.stAv{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.stNm{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:700;color:var(--txt);line-height:1.2}
+.stDp{font-family:'Rajdhani',sans-serif;font-size:10px;color:var(--txt3)}
+.fatWr{width:75px}
+.fatL{display:flex;justify-content:space-between;font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--txt3);margin-bottom:2px}
+.fatB{height:3px;background:rgba(255,255,255,.04);border-radius:2px;overflow:hidden}
+.fatBF{height:100%;border-radius:2px}
+.stSt{font-family:'Orbitron',monospace;font-size:7px;padding:3px 6px;border-radius:3px;letter-spacing:1px;flex-shrink:0}
+.stA{color:var(--green);background:var(--green-dim)}.stBr{color:var(--amber);background:var(--amber-dim)}.stCr{color:var(--red);background:var(--red-dim);animation:bR 1s infinite}
+
+/* MODAL */
+.mOv{position:fixed;inset:0;background:rgba(2,8,16,.85);z-index:800;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);animation:fadeIn .2s ease-out}
+.mOv.hide{display:none}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.modal{background:rgba(8,17,32,.98);border:1px solid var(--bdr2);border-radius:13px;padding:24px;width:580px;max-width:92vw;max-height:88vh;overflow-y:auto;box-shadow:0 0 60px rgba(0,0,0,.7);animation:mIn .3s ease-out}
+@keyframes mIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+.mH{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid var(--bdr)}
+.mTit{font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--cyan);letter-spacing:1px}
+.mX{cursor:pointer;color:var(--txt3);font-size:22px;line-height:1;transition:color .2s}.mX:hover{color:var(--txt)}
+.dGrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.dItem{background:rgba(0,0,0,.2);border:1px solid var(--bdr);border-radius:7px;padding:10px}
+.dLbl{font-family:'Orbitron',monospace;font-size:7px;letter-spacing:2px;color:var(--txt3);margin-bottom:4px}
+.dVal{font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;color:var(--txt)}
+
+/* TOAST */
+.toastArea{position:fixed;top:72px;right:16px;z-index:900;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:rgba(8,17,32,.97);border:1px solid;border-radius:9px;padding:11px 14px;width:310px;box-shadow:0 8px 24px rgba(0,0,0,.5);animation:toastIn .35s ease-out;font-family:'Rajdhani',sans-serif;font-size:13px;pointer-events:auto}
+.toast.out{animation:toastOut .3s ease-in forwards}
+@keyframes toastIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+@keyframes toastOut{from{opacity:1}to{opacity:0;transform:translateX(20px)}}
+.toast.critical{border-color:var(--red)}.toast.warning{border-color:var(--amber)}.toast.info{border-color:var(--cyan)}.toast.success{border-color:var(--green)}
+.toastTit{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:1px;margin-bottom:3px}
+.toast.critical .toastTit{color:var(--red)}.toast.warning .toastTit{color:var(--amber)}.toast.info .toastTit{color:var(--cyan)}.toast.success .toastTit{color:var(--green)}
+.toastMsg{color:var(--txt2);font-size:12px}
+
+/* EMERGENCY */
+.eBrd{display:none;position:fixed;inset:0;pointer-events:none;z-index:700;border:3px solid var(--red);animation:eBdr .5s ease-in-out infinite}
+@keyframes eBdr{0%,100%{border-color:var(--red);box-shadow:inset 0 0 25px rgba(255,77,77,.08)}50%{border-color:var(--amber);box-shadow:inset 0 0 50px rgba(255,77,77,.15)}}
+.eMode .eBrd{display:block}
+.eMode .nav{background:rgba(28,3,3,.96)}
+
+/* HELP WIDGET */
+.helpW{position:fixed;bottom:20px;right:20px;z-index:600}
+.helpBtn{width:50px;height:50px;background:linear-gradient(135deg,rgba(0,217,255,.18),rgba(0,140,200,.12));border:1px solid rgba(0,217,255,.4);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;box-shadow:0 0 20px rgba(0,217,255,.2);transition:all .3s;animation:floatH 3s ease-in-out infinite}
+@keyframes floatH{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+.helpBtn:hover{box-shadow:0 0 30px rgba(0,217,255,.35)}
+.helpPanel{position:absolute;bottom:62px;right:0;width:310px;background:rgba(8,17,32,.98);border:1px solid var(--bdr2);border-radius:11px;box-shadow:0 12px 40px rgba(0,0,0,.6);display:none;overflow:hidden;animation:dpIn .2s ease-out}
+.helpPanel.open{display:block}
+.hpH{padding:13px 14px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:rgba(0,217,255,.04)}
+.hpT{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:2px;color:var(--cyan)}
+.hpInfo{padding:12px 14px;border-bottom:1px solid var(--bdr)}
+.hpPh{font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--cyan);margin-bottom:4px}
+.hpSb{font-size:12px;color:var(--txt2)}
+.chatArea{height:190px;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px}
+.cMsg{padding:7px 10px;border-radius:6px;max-width:85%;font-size:12px;line-height:1.4;animation:mIn2 .2s ease-out}
+@keyframes mIn2{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.cMsg.sys{background:rgba(0,217,255,.07);border:1px solid rgba(0,217,255,.12);color:var(--txt2);align-self:flex-start}
+.cMsg.usr{background:rgba(0,170,200,.15);border:1px solid rgba(0,217,255,.2);color:var(--txt);align-self:flex-end}
+.cTime{font-family:'Share Tech Mono',monospace;font-size:8px;color:var(--txt3);margin-top:2px}
+.chatInpW{padding:10px;border-top:1px solid var(--bdr);display:flex;gap:7px}
+.chatInp{flex:1;background:rgba(0,217,255,.03);border:1px solid rgba(0,217,255,.12);border-radius:6px;padding:7px 10px;color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:12px;outline:none;transition:border-color .3s}
+.chatInp:focus{border-color:rgba(0,217,255,.3)}
+.chatSnd{padding:7px 11px;background:rgba(0,217,255,.12);border:1px solid rgba(0,217,255,.25);border-radius:6px;color:var(--cyan);cursor:pointer;font-size:14px;transition:all .25s}
+.chatSnd:hover{background:rgba(0,217,255,.2)}
+
+/* ANALYTICS CHART */
+.cBars{display:flex;align-items:flex-end;gap:7px;height:160px;padding:0 4px}
+.cBar{flex:1;border-radius:3px 3px 0 0;min-width:14px;position:relative;cursor:pointer;transition:opacity .2s}
+.cBar:hover{opacity:.8}
+.cBar::after{content:attr(data-v);position:absolute;top:-17px;left:50%;transform:translateX(-50%);font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt2);white-space:nowrap}
+.cXLbls{display:flex;gap:7px;padding:5px 4px 0}
+.cXL{flex:1;text-align:center;font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt3)}
+
+/* SETTINGS TOGGLE */
+.sRow{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid var(--bdr)}
+.sTog{width:40px;height:22px;background:rgba(0,217,255,.1);border:1px solid rgba(0,217,255,.2);border-radius:11px;cursor:pointer;position:relative;transition:all .3s;flex-shrink:0}
+.sTog.on{background:rgba(0,217,255,.28);border-color:rgba(0,217,255,.5)}
+.sTog::after{content:'';position:absolute;width:16px;height:16px;background:var(--txt2);border-radius:50%;top:2px;left:2px;transition:all .3s}
+.sTog.on::after{left:20px;background:var(--cyan)}
+
+/* PROFILE */
+.profCard{background:var(--bg-card);border:1px solid var(--bdr);border-radius:11px;padding:22px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.profBigAv{width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700;color:#000;background:linear-gradient(135deg,var(--cyan),rgba(0,120,180,1));border:2px solid rgba(0,217,255,.4);box-shadow:0 0 20px rgba(0,217,255,.2)}
+.profNm{font-family:'Orbitron',monospace;font-size:15px;font-weight:700;color:#fff}
+.profRl{font-family:'Rajdhani',sans-serif;font-size:13px;color:var(--cyan);letter-spacing:1px}
+.pFld{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid rgba(0,217,255,.05);margin-bottom:6px}
+.pFL{font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1.5px;color:var(--txt3)}
+.pFV{font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--txt2)}
+
+/* ADMIN */
+.admGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.admC{background:var(--bg-card);border:1px solid var(--bdr);border-radius:11px;padding:16px;cursor:pointer;transition:all .25s;text-align:center}
+.admC:hover{border-color:var(--bdr2);transform:translateY(-2px)}
+.admCIco{font-size:28px;margin-bottom:8px;display:block}
+.admCL{font-family:'Orbitron',monospace;font-size:9px;font-weight:700;letter-spacing:1px;color:var(--cyan);margin-bottom:4px}
+.admCS{font-size:11px;color:var(--txt3)}
+.actLog{display:flex;flex-direction:column;gap:6px}
+.actI{display:flex;gap:9px;padding:9px 11px;background:rgba(0,0,0,.18);border-radius:6px;border-left:2px solid var(--cyan)}
+.actT{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--txt3);flex-shrink:0;margin-top:1px}
+.actM{font-size:12px;color:var(--txt2)}
+
+/* FEEDBACK */
+.starRow{display:flex;gap:6px;margin:10px 0}
+.sStar{font-size:26px;cursor:pointer;transition:all .2s;color:var(--txt3)}
+.sStar.on{color:var(--amber);filter:drop-shadow(0 0 4px rgba(255,181,71,.5))}
+.sStar:hover{transform:scale(1.15)}
+.fbSel{background:rgba(0,217,255,.03);border:1px solid rgba(0,217,255,.14);border-radius:7px;padding:9px 12px;color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;width:100%;margin-bottom:10px;cursor:pointer;transition:border-color .3s}
+.fbSel:focus{border-color:rgba(0,217,255,.35)}
+.fbTA{width:100%;background:rgba(0,217,255,.03);border:1px solid rgba(0,217,255,.14);border-radius:7px;padding:10px 12px;color:var(--txt);font-family:'Rajdhani',sans-serif;font-size:13px;outline:none;resize:vertical;min-height:90px;transition:border-color .3s;margin-bottom:10px}
+.fbTA:focus{border-color:rgba(0,217,255,.35)}
+.fbBtn{width:100%;padding:11px;background:rgba(0,217,255,.12);border:1px solid rgba(0,217,255,.28);border-radius:7px;color:var(--cyan);font-family:'Orbitron',monospace;font-size:11px;font-weight:700;letter-spacing:2px;cursor:pointer;transition:all .3s}
+.fbBtn:hover{background:rgba(0,217,255,.2);box-shadow:0 0 18px rgba(0,217,255,.18)}
+
+/* FILTER BUTTONS */
+.fBtn{padding:5px 12px;cursor:pointer;font-family:'Orbitron',monospace;font-size:8px;font-weight:700;letter-spacing:1px;border-radius:8px;transition:all .2s}
+
+/* RESPONSIVE */
+@media(max-width:1400px){.kpiGrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:1100px){.rPanel{display:none}.g3{grid-template-columns:1fr 1fr}.kpiGrid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:768px){
+  .sb{display:none}.g2{grid-template-columns:1fr}.g3{grid-template-columns:1fr}
+  .kpiGrid{grid-template-columns:repeat(2,1fr)}.gGrid{grid-template-columns:repeat(3,1fr)}
+  .nSrch{display:none}.wBdg{display:none}.admGrid{grid-template-columns:1fr 1fr}.lCard{width:94%;padding:26px}
+}
+select option{background:#0F172A;color:var(--txt)}
+</style>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow"></div>
+<div class="eBrd"></div>
+<div class="toastArea" id="toastArea"></div>
+
+<!-- ═══════════ LOGIN ═══════════ -->
+<div id="loginPage">
+  <div class="lBg"></div>
+  <div id="starsC"></div>
+  <div id="runwayC" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100px;height:65vh;display:flex;flex-direction:column-reverse;gap:36px;align-items:center"></div>
+  <div class="hGlow"></div>
+  <div class="ac" style="--dur:18s;--del:0s;top:28%">✈</div>
+  <div class="ac" style="--dur:24s;--del:9s;top:18%;font-size:22px">✈</div>
+  <div class="ac" style="--dur:14s;--del:4s;top:38%;font-size:16px">✈</div>
+  <div class="rCorner"><div class="rRing"></div><div class="rRing"></div><div class="rRing"></div><div class="rSwp"></div><div class="rBlip"></div></div>
+  <div id="ptclC"></div>
+  <div class="lCard">
+    <div class="lLogo">
+      <div class="lLogoIcon">✈</div>
+      <div><div class="lLogoTxt">AODB CONTROL</div><div style="font-family:'Rajdhani';font-size:9px;color:var(--txt3);letter-spacing:2px">AIRPORT AUTHORITY</div></div>
+    </div>
+    <div class="lTitle">Airline Ops Briefing<br>Dashboard</div>
+    <div class="lSub">Real-time airport operations monitoring system</div>
+    <div class="divL"></div>
+    <div class="lTabs">
+      <div class="lTab on" id="tabU" onclick="switchTab('user')">👤 USER LOGIN</div>
+      <div class="lTab" id="tabA" onclick="switchTab('admin')">🛡 ADMIN LOGIN</div>
+    </div>
+    <div id="errMsg" class="err">⚠ Invalid credentials. Please try again.</div>
+    <div class="iGrp"><label class="iLbl">OPERATOR ID</label><div class="iWr"><input class="iF" type="text" id="lUser" placeholder="Enter operator ID" value="OPS_2847"><span class="iIco">👤</span></div></div>
+    <div class="iGrp"><label class="iLbl">SECURITY PASSPHRASE</label><div class="iWr"><input class="iF" type="password" id="lPass" placeholder="Enter passphrase" value="ops2024"><span class="iIco">🔒</span></div></div>
+    <div class="lEx"><label class="chk"><input type="checkbox" id="remMe" checked> Remember session</label><a href="#" class="fgt" onclick="return false" title="Contact +91 98765 43210">RESET ACCESS</a></div>
+    <button class="lBtn" id="lBtn" onclick="doLogin()">✈ &nbsp; AUTHORIZE ACCESS</button>
+    <div class="clrBdg"><span>🔴</span><span>RESTRICTED — AUTHORIZED PERSONNEL ONLY — CLEARANCE LEVEL 4</span></div>
+  </div>
+  <div class="ticker">
+    <div class="tLabel">⚡ LIVE OPS</div>
+    <div class="tContent" id="tickC"></div>
+  </div>
+</div>
+
+<!-- ═══════════ APP ═══════════ -->
+<div id="app" style="display:none;height:100vh;flex-direction:column">
+
+  <!-- NAVBAR -->
+  <nav class="nav">
+    <div class="nLogo" onclick="goPage('dashboard')">
+      <div class="nLogoIco">✈</div>
+      <div><div class="nLogoT">AODB CONTROL</div><div class="nLogoS">HYD INTL • RJAA</div></div>
+    </div>
+    <div class="nDiv"></div>
+    <div class="nSrch" id="srchWr">
+      <input type="text" placeholder="Search flights, gates, staff..." id="srchInp" oninput="doSearch(this.value)" onblur="setTimeout(closeSrch,200)">
+      <div class="srchDd" id="srchDd"></div>
+    </div>
+    <div class="nSp"></div>
+    <div class="wBdg">⛅ <span class="temp" id="wTemp">28°C</span> Hyderabad &nbsp;|&nbsp; Vis: <span id="wVis">8km</span></div>
+    <div class="nClk" id="nClk">--:--:--</div>
+    <div class="nBtn" id="nfBtn" onclick="toggleDp('nfDp')" title="Notifications">🔔<div class="nBdg" id="nBdg"></div></div>
+    <div class="nBtn" onclick="goPage('settings')" title="Settings">⚙</div>
+    <button class="stormBtn" id="stormBtn" onclick="toggleEmg()">⚡ STORM PROTOCOL</button>
+    <div class="profBtn" id="profBtn" onclick="toggleDp('profDp')">
+      <div class="profAv" id="navAv">OPS</div>
+      <span class="profNm" id="navNm">Cmd. Sharma</span>
+    </div>
+    <!-- Notif dropdown -->
+    <div class="dp" id="nfDp" style="right:130px">
+      <div class="dpH"><span class="dpT">LIVE ALERTS</span><div style="display:flex;gap:10px;align-items:center"><span style="font-family:'Orbitron',monospace;font-size:8px;color:var(--txt3);cursor:pointer" onclick="markAllRead()">MARK ALL READ</span><span class="dpX" onclick="closeDp('nfDp')">×</span></div></div>
+      <div class="dpB" id="nfList"></div>
+      <div class="dpF"><span style="font-family:'Orbitron',monospace;font-size:8px;color:var(--cyan);cursor:pointer" onclick="goPage('notifications');closeDp('nfDp')">VIEW ALL ALERTS →</span></div>
+    </div>
+    <!-- Profile dropdown -->
+    <div class="dp" id="profDp" style="width:210px">
+      <div class="dpH"><span class="dpT">OPERATOR MENU</span><span class="dpX" onclick="closeDp('profDp')">×</span></div>
+      <div class="dpB" style="padding:6px">
+        <div class="pItem" onclick="goPage('profile');closeDp('profDp')">👤 My Profile</div>
+        <div class="pItem" onclick="goPage('settings');closeDp('profDp')">⚙ Settings</div>
+        <div class="pItem" onclick="goPage('feedback');closeDp('profDp')">💬 Feedback</div>
+        <div class="pItem" onclick="goPage('notifications');closeDp('profDp')">🔔 Notifications</div>
+        <div class="pItem danger" onclick="doLogout()">🚪 Logout</div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- BODY -->
+  <div class="appBody">
+    <!-- SIDEBAR -->
+    <aside class="sb" id="sb">
+      <div class="sbi on" data-p="dashboard" onclick="goPage('dashboard')"><span class="sbIco">📊</span><span class="sbLbl">Dashboard</span></div>
+      <div class="sbi" data-p="flights" onclick="goPage('flights')"><span class="sbIco">✈</span><span class="sbLbl">Flights</span></div>
+      <div class="sbi" data-p="gates" onclick="goPage('gates')"><span class="sbIco">🏢</span><span class="sbLbl">Gates</span></div>
+      <div class="sbi" data-p="staff" onclick="goPage('staff')"><span class="sbIco">👥</span><span class="sbLbl">Staff</span></div>
+      <div class="sbi" data-p="weather" onclick="goPage('weather')"><span class="sbIco">🌧</span><span class="sbLbl">Weather</span></div>
+      <div class="sbi" data-p="analytics" onclick="goPage('analytics')"><span class="sbIco">📈</span><span class="sbLbl">Analytics</span></div>
+      <div class="sbi" data-p="reports" onclick="goPage('reports')"><span class="sbIco">📋</span><span class="sbLbl">Reports</span></div>
+      <div class="sbi" data-p="notifications" onclick="goPage('notifications')"><span class="sbIco">🔔</span><span class="sbLbl">Notifications</span></div>
+      <div class="sbi" data-p="feedback" onclick="goPage('feedback')"><span class="sbIco">💬</span><span class="sbLbl">Feedback</span></div>
+      <div class="sbSp"></div>
+      <div class="sbDiv"></div>
+      <div class="sbi" data-p="profile" onclick="goPage('profile')"><span class="sbIco">👤</span><span class="sbLbl">Profile</span></div>
+      <div class="sbi" data-p="settings" onclick="goPage('settings')"><span class="sbIco">⚙</span><span class="sbLbl">Settings</span></div>
+      <div class="sbi" data-p="admin" id="adminSB" style="display:none" onclick="goPage('admin')"><span class="sbIco">🛡</span><span class="sbLbl">Admin Panel</span></div>
+    </aside>
+
+    <!-- PAGES -->
+    <div class="mainArea">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="pg on" id="pg-dashboard">
+        <div class="kpiGrid" id="kpiGrid"></div>
+        <div class="g2" style="grid-template-columns:1fr 290px">
+          <div>
+            <div class="sH"><div class="sT">FLIGHT OPERATIONS MONITOR</div><span class="bdg bLive">● LIVE</span></div>
+            <div class="ftWr"><table class="ft"><thead><tr><th>FLIGHT</th><th>AIRLINE</th><th>GATE</th><th>DESTINATION</th><th>STATUS</th><th>DELAY</th><th>CREW</th></tr></thead><tbody id="dashFtbody"></tbody></table></div>
+          </div>
+          <div>
+            <div class="sH"><div class="sT">AI RISK ENGINE</div><span class="bdg bWarn">⚡ ACTIVE</span></div>
+            <div class="aiCard">
+              <div class="aiBdg">🤖 NEURAL OPS ANALYSIS</div>
+              <div class="aiRisk" id="aiRiskVal">74%</div>
+              <div class="aiRLbl">PREDICTED OPERATIONAL RISK</div>
+              <div class="rBar"><div class="rBarF" id="rBarF" style="width:74%"></div></div>
+              <div id="aiFactors"></div>
+            </div>
+          </div>
+        </div>
+        <div class="g3">
+          <div>
+            <div class="sH"><div class="sT">GATE MANAGEMENT</div><span class="bdg bInfo">12 ACTIVE</span></div>
+            <div class="card"><div class="gGrid" id="dashGates"></div></div>
+          </div>
+          <div>
+            <div class="sH"><div class="sT">WEATHER SYSTEMS</div><span class="bdg bWarn">MODERATE</span></div>
+            <div class="card">
+              <div style="width:110px;height:110px;margin:0 auto 12px;position:relative">
+                <svg viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                  <circle cx="55" cy="55" r="50" fill="none" stroke="rgba(0,217,255,0.08)" stroke-width="1"/>
+                  <circle cx="55" cy="55" r="35" fill="none" stroke="rgba(0,217,255,0.12)" stroke-width="1"/>
+                  <circle cx="55" cy="55" r="20" fill="none" stroke="rgba(0,217,255,0.18)" stroke-width="1"/>
+                  <circle cx="55" cy="55" r="7" fill="rgba(0,217,255,0.1)"/>
+                  <line x1="55" y1="5" x2="55" y2="105" stroke="rgba(0,217,255,0.06)" stroke-width="1"/>
+                  <line x1="5" y1="55" x2="105" y2="55" stroke="rgba(0,217,255,0.06)" stroke-width="1"/>
+                  <defs><radialGradient id="sg1" cx="60%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(0,217,255,0.38)"/><stop offset="100%" stop-color="rgba(0,217,255,0)"/></radialGradient></defs>
+                  <path d="M55,55 L100,55 A45,45 0 0,0 55,10 Z" fill="url(#sg1)" opacity="0.6"><animateTransform attributeName="transform" type="rotate" from="0 55 55" to="360 55 55" dur="4s" repeatCount="indefinite"/></path>
+                  <circle cx="72" cy="35" r="3" fill="#00D9FF" opacity="0.9"><animate attributeName="opacity" values="0.9;0.1;0.9" dur="4s" begin="1s" repeatCount="indefinite"/></circle>
+                  <circle cx="42" cy="67" r="2" fill="#FFB547" opacity="0.8"><animate attributeName="opacity" values="0.8;0.2;0.8" dur="4s" begin="2s" repeatCount="indefinite"/></circle>
+                </svg>
+              </div>
+              <div class="wMets" id="dashWMets"></div>
+            </div>
+          </div>
+          <div>
+            <div class="sH"><div class="sT">STAFF STATUS</div><span class="bdg bLive">● ONLINE</span></div>
+            <div class="card" id="dashStaff"></div>
+          </div>
+        </div>
+        <div>
+          <div class="sH"><div class="sT">DELAY HEATMAP — TERMINAL OVERVIEW</div><span class="bdg bInfo">TODAY</span></div>
+          <div class="card" id="dashHeatmap"></div>
+        </div>
+      </div>
+
+      <!-- ── FLIGHTS ── -->
+      <div class="pg" id="pg-flights">
+        <div class="sH"><div class="sT">ALL FLIGHTS — LIVE OPS</div><span class="bdg bLive">● LIVE</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="fBtn bInfo" onclick="filterF('all')">ALL FLIGHTS</button>
+          <button class="fBtn bLive" onclick="filterF('boarding')">BOARDING</button>
+          <button class="fBtn bWarn" onclick="filterF('delayed')">DELAYED</button>
+          <button class="fBtn bRed" onclick="filterF('conflict')">CONFLICT</button>
+          <button class="fBtn" style="color:var(--blue);background:rgba(96,165,250,0.1);border:1px solid rgba(96,165,250,0.18)" onclick="filterF('taxiing')">TAXIING</button>
+        </div>
+        <div class="ftWr"><table class="ft"><thead><tr><th>FLIGHT</th><th>AIRLINE</th><th>ORIGIN</th><th>DESTINATION</th><th>GATE</th><th>STATUS</th><th>DEP</th><th>DELAY</th><th>CREW</th><th>AIRCRAFT</th></tr></thead><tbody id="flightsTbody"></tbody></table></div>
+      </div>
+
+      <!-- ── GATES ── -->
+      <div class="pg" id="pg-gates">
+        <div class="sH"><div class="sT">GATE MANAGEMENT & OCCUPANCY</div><span class="bdg bLive">● LIVE</span></div>
+        <div class="g2">
+          <div><div class="card"><div class="gGrid" id="gatesGrid"></div></div></div>
+          <div>
+            <div class="sH"><div class="sT">GATE TIMELINE</div></div>
+            <div class="card" id="gateTL"></div>
+          </div>
+        </div>
+        <div class="sH" style="margin-top:4px"><div class="sT">CONFLICT ALERTS</div><span class="bdg bRed">⚠ ACTIVE</span></div>
+        <div class="card" id="gateConf"></div>
+      </div>
+
+      <!-- ── STAFF ── -->
+      <div class="pg" id="pg-staff">
+        <div class="sH"><div class="sT">STAFF OPERATIONS CENTER</div><span class="bdg bLive">● ONLINE</span></div>
+        <div class="g3" style="margin-bottom:14px">
+          <div class="card" style="text-align:center"><div class="kpiV" style="color:var(--green)">312</div><div class="kpiL" style="margin-top:4px">STAFF ONLINE</div></div>
+          <div class="card" style="text-align:center"><div class="kpiV" style="color:var(--amber)">28</div><div class="kpiL" style="margin-top:4px">ON BREAK</div></div>
+          <div class="card" style="text-align:center"><div class="kpiV" style="color:var(--red)">3</div><div class="kpiL" style="margin-top:4px">CRITICAL FATIGUE</div></div>
+        </div>
+        <div class="sH"><div class="sT">STAFF ROSTER</div></div>
+        <div class="card" id="staffAll"></div>
+      </div>
+
+      <!-- ── WEATHER ── -->
+      <div class="pg" id="pg-weather">
+        <div class="sH"><div class="sT">WEATHER SYSTEMS — LIVE</div><span class="bdg bWarn">MODERATE RISK</span></div>
+        <div class="g2">
+          <div class="card">
+            <div style="text-align:center;padding:10px 0">
+              <div style="width:160px;height:160px;margin:0 auto 16px;position:relative">
+                <svg viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
+                  <circle cx="80" cy="80" r="74" fill="none" stroke="rgba(0,217,255,0.07)" stroke-width="1"/>
+                  <circle cx="80" cy="80" r="54" fill="none" stroke="rgba(0,217,255,0.11)" stroke-width="1"/>
+                  <circle cx="80" cy="80" r="34" fill="none" stroke="rgba(0,217,255,0.17)" stroke-width="1"/>
+                  <circle cx="80" cy="80" r="14" fill="rgba(0,217,255,0.09)"/>
+                  <line x1="80" y1="6" x2="80" y2="154" stroke="rgba(0,217,255,0.05)" stroke-width="1"/>
+                  <line x1="6" y1="80" x2="154" y2="80" stroke="rgba(0,217,255,0.05)" stroke-width="1"/>
+                  <defs><radialGradient id="sg2" cx="60%" cy="50%" r="50%"><stop offset="0%" stop-color="rgba(0,217,255,0.4)"/><stop offset="100%" stop-color="rgba(0,217,255,0)"/></radialGradient></defs>
+                  <path d="M80,80 L154,80 A74,74 0 0,0 80,6 Z" fill="url(#sg2)" opacity="0.6"><animateTransform attributeName="transform" type="rotate" from="0 80 80" to="360 80 80" dur="4s" repeatCount="indefinite"/></path>
+                  <circle cx="110" cy="52" r="4" fill="#00D9FF" opacity="0.9"><animate attributeName="opacity" values="0.9;0.1;0.9" dur="4s" begin="1s" repeatCount="indefinite"/></circle>
+                  <circle cx="58" cy="100" r="3" fill="#FFB547" opacity="0.8"><animate attributeName="opacity" values="0.8;0.2;0.8" dur="4s" begin="2s" repeatCount="indefinite"/></circle>
+                  <circle cx="120" cy="95" r="2.5" fill="#FF4D4D" opacity="0.7"><animate attributeName="opacity" values="0.7;0.15;0.7" dur="3s" begin="0.5s" repeatCount="indefinite"/></circle>
+                </svg>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px" id="wxFull"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card" style="margin-bottom:12px">
+              <div class="sT" style="margin-bottom:12px">STORM ALERTS</div>
+              <div style="padding:10px;background:var(--amber-dim);border:1px solid rgba(255,181,71,.25);border-radius:7px;margin-bottom:8px"><div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--amber);margin-bottom:3px">⚡ THUNDERSTORM WATCH</div><div style="font-size:12px;color:var(--txt2)">Approaching from SW, ETA 2h. Expect delays and reduced visibility.</div></div>
+              <div style="padding:10px;background:var(--cyan-dim);border:1px solid rgba(0,217,255,.18);border-radius:7px"><div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--cyan);margin-bottom:3px">💨 WIND ADVISORY</div><div style="font-size:12px;color:var(--txt2)">Crosswind gusts up to 25 kts on runway 09L.</div></div>
+            </div>
+            <div class="card">
+              <div class="sT" style="margin-bottom:12px">TURBULENCE FORECAST</div>
+              <div id="turbFC"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ANALYTICS ── -->
+      <div class="pg" id="pg-analytics">
+        <div class="sH"><div class="sT">OPERATIONS ANALYTICS</div><span class="bdg bInfo">30 DAYS</span></div>
+        <div class="g2" style="margin-bottom:14px">
+          <div>
+            <div class="sH"><div class="sT">DAILY FLIGHT VOLUME</div></div>
+            <div class="card" style="height:220px;overflow:hidden">
+              <div class="cBars" id="anaBar"></div>
+              <div class="cXLbls" id="anaBarX"></div>
+            </div>
+          </div>
+          <div>
+            <div class="sH"><div class="sT">ON-TIME PERFORMANCE %</div></div>
+            <div class="card" style="height:220px;overflow:hidden;display:flex;align-items:flex-end">
+              <svg width="100%" height="170" viewBox="0 0 300 100" preserveAspectRatio="none" id="lineC"></svg>
+            </div>
+          </div>
+        </div>
+        <div class="g3">
+          <div class="card" style="text-align:center"><div class="kpiV" style="color:var(--cyan)">84%</div><div class="kpiL" style="margin-top:4px">ON-TIME RATE</div></div>
+          <div class="card" style="text-align:center"><div class="kpiV" style="color:var(--amber)">23</div><div class="kpiL" style="margin-top:4px">AVG DELAY (MIN)</div></div>
+          <div class="card" style="text-align:center"><div class="kpiV" style="color:var(--green)">142</div><div class="kpiL" style="margin-top:4px">FLIGHTS TODAY</div></div>
+        </div>
+      </div>
+
+      <!-- ── REPORTS ── -->
+      <div class="pg" id="pg-reports">
+        <div class="sH"><div class="sT">OPERATIONAL REPORTS & EXPORT</div><span class="bdg bInfo">BRIEFING TOOLS</span></div>
+        <div class="g2">
+          <div class="card">
+            <div class="sT" style="margin-bottom:14px">GENERATE REPORT</div>
+            <div class="iGrp"><label class="iLbl">REPORT TYPE</label><select class="fbSel" id="repType"><option value="daily">Daily Operations Briefing</option><option value="weekly">Weekly Performance Report</option><option value="delay">Delay Analysis Report</option><option value="gate">Gate Utilization Report</option><option value="staff">Staff Allocation Report</option></select></div>
+            <div class="iGrp"><label class="iLbl">DATE</label><input type="date" id="repDate" class="iF" style="padding:9px 12px"></div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="fbBtn" style="flex:1" onclick="exportRep('PDF')">📄 Export PDF</button>
+              <button class="fbBtn" style="flex:1" onclick="exportRep('CSV')">📊 Export CSV</button>
+              <button class="fbBtn" style="flex:1" onclick="exportRep('Excel')">📋 Export Excel</button>
+            </div>
+          </div>
+          <div class="card">
+            <div class="sT" style="margin-bottom:14px">RECENT REPORTS</div>
+            <div id="recReports"></div>
+          </div>
+        </div>
+        <div class="sH" style="margin-top:4px"><div class="sT">HISTORICAL DATE PICKER</div></div>
+        <div class="card"><div id="calWr" style="max-width:340px"></div></div>
+      </div>
+
+      <!-- ── NOTIFICATIONS ── -->
+      <div class="pg" id="pg-notifications">
+        <div class="sH"><div class="sT">ALL SYSTEM NOTIFICATIONS</div><span class="bdg bRed" id="allNfCnt">7 ALERTS</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+          <button class="fBtn bRed" onclick="filterNf('critical')">CRITICAL</button>
+          <button class="fBtn bWarn" onclick="filterNf('warning')">WARNING</button>
+          <button class="fBtn bInfo" onclick="filterNf('info')">INFO</button>
+          <button class="fBtn bLive" onclick="filterNf('success')">SUCCESS</button>
+          <button class="fBtn" style="color:var(--txt3);background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)" onclick="filterNf('all')">ALL</button>
+        </div>
+        <div class="card" id="allNfList"></div>
+      </div>
+
+      <!-- ── PROFILE ── -->
+      <div class="pg" id="pg-profile">
+        <div class="sH"><div class="sT">OPERATOR PROFILE</div></div>
+        <div class="g2">
+          <div class="profCard" id="profPageCard"></div>
+          <div class="card">
+            <div class="sT" style="margin-bottom:14px">EDIT PROFILE</div>
+            <div class="iGrp"><label class="iLbl">DISPLAY NAME</label><input class="iF" type="text" id="editNm" style="padding:11px 14px"></div>
+            <div class="iGrp"><label class="iLbl">EMAIL ADDRESS</label><input class="iF" type="email" id="editEm" style="padding:11px 14px"></div>
+            <div class="iGrp"><label class="iLbl">AIRPORT ASSIGNED</label><input class="iF" type="text" id="editAp" style="padding:11px 14px" value="Hyderabad Rajiv Gandhi Intl"></div>
+            <button class="fbBtn" onclick="saveProfChg()">💾 SAVE CHANGES</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SETTINGS ── -->
+      <div class="pg" id="pg-settings">
+        <div class="sH"><div class="sT">SYSTEM SETTINGS</div></div>
+        <div class="card">
+          <div class="sRow"><div><div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--txt)">🔔 Notifications</div><div style="font-size:11px;color:var(--txt3)">Enable real-time alerts and toasts</div></div><div class="sTog on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sRow"><div><div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--txt)">⚡ Auto-refresh</div><div style="font-size:11px;color:var(--txt3)">Live data every 30 seconds</div></div><div class="sTog on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sRow"><div><div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--txt)">🌐 Storm Protocol Warnings</div><div style="font-size:11px;color:var(--txt3)">Emergency override alerts</div></div><div class="sTog on" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sRow"><div><div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--txt)">📊 Analytics Tracking</div><div style="font-size:11px;color:var(--txt3)">Operational metrics logging</div></div><div class="sTog" onclick="this.classList.toggle('on')"></div></div>
+          <div class="sRow" style="border-bottom:none"><div><div style="font-family:'Rajdhani',sans-serif;font-size:14px;font-weight:600;color:var(--txt)">🌙 Compact Mode</div><div style="font-size:11px;color:var(--txt3)">Reduced padding and spacing</div></div><div class="sTog" onclick="this.classList.toggle('on')"></div></div>
+        </div>
+        <div class="sH" style="margin-top:8px"><div class="sT">LANGUAGE & REGION</div></div>
+        <div class="card">
+          <div class="iGrp"><label class="iLbl">LANGUAGE</label><select class="fbSel"><option>English (Default)</option><option>हिन्दी (Hindi)</option><option>العربية (Arabic)</option><option>中文 (Chinese)</option></select></div>
+          <div class="iGrp" style="margin-bottom:0"><label class="iLbl">TIMEZONE</label><select class="fbSel"><option>IST (UTC+5:30)</option><option>UTC</option><option>EST (UTC-5)</option><option>PST (UTC-8)</option></select></div>
+        </div>
+      </div>
+
+      <!-- ── FEEDBACK ── -->
+      <div class="pg" id="pg-feedback">
+        <div class="sH"><div class="sT">FEEDBACK & SUPPORT</div></div>
+        <div class="g2">
+          <div class="card">
+            <div class="sT" style="margin-bottom:14px">SUBMIT FEEDBACK</div>
+            <div id="fbFormWr">
+              <label class="iLbl">YOUR RATING</label>
+              <div class="starRow" id="starRow">
+                <span class="sStar" onclick="rateStar(1)">★</span><span class="sStar" onclick="rateStar(2)">★</span><span class="sStar" onclick="rateStar(3)">★</span><span class="sStar" onclick="rateStar(4)">★</span><span class="sStar" onclick="rateStar(5)">★</span>
+              </div>
+              <label class="iLbl">CATEGORY</label>
+              <select class="fbSel" id="fbCat"><option value="">— Select Category —</option><option value="ui">UI / Design</option><option value="perf">Performance</option><option value="bug">Bug Report</option><option value="suggest">Suggestion</option><option value="other">Other</option></select>
+              <label class="iLbl">YOUR FEEDBACK</label>
+              <textarea class="fbTA" id="fbTxt" placeholder="Describe your feedback, bug, or suggestion..."></textarea>
+              <button class="fbBtn" onclick="submitFB()">📨 SUBMIT FEEDBACK</button>
+            </div>
+            <div id="fbOK" style="display:none;text-align:center;padding:24px">
+              <div style="font-size:36px;margin-bottom:10px">✅</div>
+              <div style="font-family:'Orbitron',monospace;font-size:12px;color:var(--green);letter-spacing:1px;margin-bottom:6px">FEEDBACK SUBMITTED</div>
+              <div style="font-size:12px;color:var(--txt2)">Thank you! Your feedback has been recorded.</div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="sT" style="margin-bottom:14px">SUPPORT CHANNEL</div>
+            <div style="margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--bdr)">
+              <div style="font-family:'Share Tech Mono',monospace;font-size:13px;color:var(--cyan);margin-bottom:4px">📞 +91 98765 43210</div>
+              <div style="font-size:12px;color:var(--txt2)">24/7 Operations Support Hotline</div>
+            </div>
+            <div class="sT" style="margin-bottom:12px">FREQUENTLY ASKED</div>
+            <div id="faqList"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── ADMIN ── -->
+      <div class="pg" id="pg-admin">
+        <div class="sH"><div class="sT">🛡 ADMIN CONTROL PANEL</div><span class="bdg bRed">RESTRICTED</span></div>
+        <div class="admGrid" id="admCards" style="margin-bottom:14px"></div>
+        <div class="g2">
+          <div>
+            <div class="sH"><div class="sT">FLIGHT MANAGEMENT</div></div>
+            <div class="card">
+              <table style="width:100%;border-collapse:collapse;font-size:12px">
+                <thead><tr><th style="padding:8px 11px;font-family:'Orbitron',monospace;font-size:7px;letter-spacing:2px;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left;background:rgba(0,0,0,.18)">FLIGHT</th><th style="padding:8px 11px;font-family:'Orbitron',monospace;font-size:7px;letter-spacing:2px;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left;background:rgba(0,0,0,.18)">STATUS</th><th style="padding:8px 11px;font-family:'Orbitron',monospace;font-size:7px;letter-spacing:2px;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left;background:rgba(0,0,0,.18)">GATE</th><th style="padding:8px 11px;font-family:'Orbitron',monospace;font-size:7px;letter-spacing:2px;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left;background:rgba(0,0,0,.18)">DELAY</th><th style="padding:8px 11px;font-family:'Orbitron',monospace;font-size:7px;letter-spacing:2px;color:var(--txt3);border-bottom:1px solid var(--bdr);text-align:left;background:rgba(0,0,0,.18)">ACTION</th></tr></thead>
+                <tbody id="admFTbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div>
+            <div class="sH"><div class="sT">ACTIVITY LOG</div></div>
+            <div class="card"><div class="actLog" id="admActLog"></div></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end pages -->
+
+    <!-- RIGHT PANEL -->
+    <aside class="rPanel">
+      <div class="rpH"><span class="sT" style="font-size:9px">LIVE ALERTS</span><span class="rpCnt" id="rpCnt">7</span></div>
+      <div class="alList" id="rAlList"></div>
+      <div class="mapWr">
+        <div class="sT" style="font-size:9px;margin-bottom:9px">ROUTE TRACKING</div>
+        <div class="miniMap" id="miniMap" style="position:relative">
+          <!-- India SVG outline -->
+          <svg width="100%" height="100%" viewBox="0 0 240 160" style="position:absolute;inset:0;pointer-events:none">
+            <path d="M70,20 L90,15 L115,10 L140,12 L160,18 L175,30 L180,45 L175,60 L170,75 L165,90 L158,105 L150,118 L140,130 L130,140 L120,150 L115,155 L108,150 L100,140 L92,128 L85,115 L78,100 L72,85 L65,70 L60,55 L58,40 L62,28 Z" fill="none" stroke="rgba(0,217,255,0.18)" stroke-width="1.5"/>
+            <path d="M115,10 L125,8 L135,10 L145,15 L155,20 L160,18" fill="none" stroke="rgba(0,217,255,0.12)" stroke-width="1"/>
+            <text x="110" y="80" text-anchor="middle" font-family="Share Tech Mono" font-size="8" fill="rgba(0,217,255,0.2)">INDIA</text>
+          </svg>
+          <div id="mapDots"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="mOv hide" id="mOv" onclick="closeMod(event)">
+  <div class="modal" id="modBox">
+    <div class="mH"><span class="mTit" id="modT">Details</span><span class="mX" onclick="closeMod()">×</span></div>
+    <div id="modB"></div>
+  </div>
+</div>
+
+<!-- HELP WIDGET -->
+<div class="helpW" id="helpW" style="display:none">
+  <div class="helpPanel" id="helpPanel">
+    <div class="hpH"><span class="hpT">⚡ OPS SUPPORT</span><span class="dpX" onclick="toggleHelp()">×</span></div>
+    <div class="hpInfo"><div class="hpPh">📞 +91 98765 43210</div><div class="hpSb">24/7 Operations Support</div></div>
+    <div class="chatArea" id="chatArea"></div>
+    <div class="chatInpW"><input class="chatInp" id="chatInp" placeholder="Type your message..." onkeydown="if(event.key==='Enter')sendChat()"><button class="chatSnd" onclick="sendChat()">➤</button></div>
+  </div>
+  <div class="helpBtn" onclick="toggleHelp()">💬</div>
+</div>
+
+<script>
+// ═══════════ DATA ═══════════
+const CREDS={
+  user:{id:'OPS_2847',pass:'ops2024',name:'Cmd. Sharma',role:'Operations Manager',email:'sharma@aodb.in'},
+  admin:{id:'ADMIN_001',pass:'admin2024',name:'Adm. Verma',role:'System Administrator',email:'admin@aodb.in'}
+};
+const FLIGHTS=[
+  {id:'AI-203',airline:'Air India',origin:'DEL',dest:'Mumbai BOM',gate:'B-12',status:'delayed',dep:'14:30',delay:'+45m',crew:80,ac:'B787',alt:'35000ft',spd:'820 km/h'},
+  {id:'6E-422',airline:'IndiGo',origin:'BLR',dest:'Delhi DEL',gate:'A-04',status:'boarding',dep:'15:00',delay:'—',crew:95,ac:'A320',alt:'—',spd:'—'},
+  {id:'UK-147',airline:'Vistara',origin:'MAA',dest:'Bangalore BLR',gate:'C-05',status:'conflict',dep:'15:15',delay:'+12m',crew:60,ac:'A321',alt:'28000ft',spd:'790 km/h'},
+  {id:'SG-441',airline:'SpiceJet',origin:'HYD',dest:'Chennai MAA',gate:'D-09',status:'taxiing',dep:'14:45',delay:'—',crew:100,ac:'B737',alt:'Ground',spd:'45 km/h'},
+  {id:'EK-524',airline:'Emirates',origin:'DXB',dest:'Dubai DXB',gate:'T-01',status:'boarding',dep:'16:00',delay:'—',crew:88,ac:'B777',alt:'—',spd:'—'},
+  {id:'QR-573',airline:'Qatar Air',origin:'DOH',dest:'Doha DOH',gate:'T-03',status:'delayed',dep:'16:30',delay:'+20m',crew:72,ac:'B787',alt:'33000ft',spd:'850 km/h'},
+  {id:'AI-556',airline:'Air India',origin:'CCU',dest:'Kolkata CCU',gate:'B-07',status:'departed',dep:'13:00',delay:'—',crew:90,ac:'A320',alt:'38000ft',spd:'840 km/h'},
+  {id:'6E-817',airline:'IndiGo',origin:'PNQ',dest:'Pune PNQ',gate:'A-11',status:'boarding',dep:'15:45',delay:'—',crew:85,ac:'A320',alt:'—',spd:'—'},
+  {id:'IX-302',airline:'Air Asia',origin:'KUL',dest:'KL KUL',gate:'T-05',status:'scheduled',dep:'17:00',delay:'—',crew:78,ac:'A320',alt:'—',spd:'—'},
+  {id:'SG-120',airline:'SpiceJet',origin:'AMD',dest:'Ahmedabad AMD',gate:'C-02',status:'delayed',dep:'14:00',delay:'+30m',crew:65,ac:'B737',alt:'—',spd:'—'},
+];
+const GATES=[
+  {id:'A-04',flight:'6E-422',status:'boarding',occ:85},{id:'A-08',flight:'—',status:'empty',occ:0},
+  {id:'A-11',flight:'6E-817',status:'boarding',occ:65},{id:'B-05',flight:'—',status:'empty',occ:0},
+  {id:'B-07',flight:'AI-556',status:'occupied',occ:100},{id:'B-12',flight:'AI-203',status:'occupied',occ:90},
+  {id:'C-02',flight:'SG-120',status:'occupied',occ:70},{id:'C-05',flight:'UK-147',status:'conflict',occ:95},
+  {id:'C-09',flight:'—',status:'empty',occ:0},{id:'D-03',flight:'—',status:'empty',occ:0},
+  {id:'D-09',flight:'SG-441',status:'occupied',occ:70},{id:'T-01',flight:'EK-524',status:'boarding',occ:80},
+];
+const STAFF=[
+  {name:'Rajesh Kumar',dept:'Ground Ops',shift:'08:00-16:00',fatigue:65,status:'available',color:'#00D9FF'},
+  {name:'Priya Sharma',dept:'ATC Support',shift:'12:00-20:00',fatigue:40,status:'available',color:'#4ADE80'},
+  {name:'Mohammed Ali',dept:'Fuel Ops',shift:'06:00-14:00',fatigue:88,status:'critical',color:'#FF4D4D'},
+  {name:'Sunita Reddy',dept:'Baggage',shift:'10:00-18:00',fatigue:72,status:'break',color:'#FFB547'},
+  {name:'Vikram Singh',dept:'Security',shift:'14:00-22:00',fatigue:30,status:'available',color:'#00D9FF'},
+  {name:'Anita Mehta',dept:'Ground Ops',shift:'10:00-18:00',fatigue:55,status:'available',color:'#4ADE80'},
+  {name:'Ravi Patel',dept:'Fuel Ops',shift:'08:00-16:00',fatigue:82,status:'critical',color:'#FF4D4D'},
+];
+const ALERTS=[
+  {type:'CRITICAL',msg:'Gate C-05 conflict: UK-147 & SG-120 overlap 15 min.',time:'14:32',level:'critical'},
+  {type:'WEATHER',msg:'Thunderstorm cell approaching from SW. Turbulence likely.',time:'14:28',level:'warning'},
+  {type:'DELAY',msg:'AI-203 delayed +45min due to inbound aircraft issue.',time:'14:21',level:'warning'},
+  {type:'STAFF',msg:'Sector D ground crew shortage. 3 staff required immediately.',time:'14:15',level:'critical'},
+  {type:'OPS INFO',msg:'Runway 09L cleared. Normal operations resumed.',time:'14:10',level:'info'},
+  {type:'FUEL',msg:'AI-556 fuel loading complete. Ready for push-back.',time:'14:05',level:'success'},
+  {type:'ATC',msg:'SG-441 cleared for taxi to runway 27R.',time:'13:58',level:'info'},
+  {type:'CRITICAL',msg:'Mohammed Ali fatigue critical (88%). Relief needed.',time:'13:45',level:'critical'},
+];
+const KPIS=[
+  {lbl:'TOTAL FLIGHTS',val:142,icon:'✈',trend:'▲ +8 today',tc:'tUp',fill:70,col:'#00D9FF',pg:'flights'},
+  {lbl:'DELAYED',val:23,icon:'⏱',trend:'▲ 4 from avg',tc:'tDn',fill:30,col:'#FFB547',pg:'flights'},
+  {lbl:'ACTIVE GATES',val:38,icon:'🏢',trend:'94% utilized',tc:'tUp',fill:94,col:'#00D9FF',pg:'gates'},
+  {lbl:'STAFF ONLINE',val:312,icon:'👥',trend:'▼ 3 shortage',tc:'tWn',fill:78,col:'#FFB547',pg:'staff'},
+  {lbl:'WEATHER SEV.',val:'MOD',icon:'⛅',trend:'Wind 18 kts',tc:'tWn',fill:50,col:'#FFB547',pg:'weather'},
+  {lbl:'ON-TIME PERF.',val:'84%',icon:'🎯',trend:'▲ 3% vs yesterday',tc:'tUp',fill:84,col:'#4ADE80',pg:'analytics'},
+];
+const WX=[
+  {val:'28°C',lbl:'TEMPERATURE',col:'#FFB547'},{val:'18kt',lbl:'WIND SPEED',col:'#00D9FF'},
+  {val:'8km',lbl:'VISIBILITY',col:'#4ADE80'},{val:'35%',lbl:'RAIN PROB.',col:'#60A5FA'},
+  {val:'MOD',lbl:'TURBULENCE',col:'#FFB547'},{val:'⚠ ACTIVE',lbl:'STORM WARN',col:'#FF4D4D'},
+];
+const HM_ROWS=['T1','T2','T3','T4'];
+const HM_TIMES=['06','08','10','12','14','16','18','20'];
+const HM_VALS=[[.1,.3,.7,.9,.8,.5,.3,.1],[.2,.5,.8,1,.9,.6,.4,.2],[.1,.2,.5,.7,1,.8,.5,.3],[0,.1,.3,.5,.7,.9,.6,.2]];
+const TICK_DATA=[
+  {t:'AI203 DELAYED — WEATHER CONDITIONS — ETA +45MIN',c:''},
+  {t:'GATE B12 OCCUPIED — INDIGO 6E-422 BOARDING',c:'g'},
+  {t:'RUNWAY 09L CLEAR — TAXIING AUTHORIZED',c:'g'},
+  {t:'UK147 CONFLICT DETECTED — GATE C5 REASSIGNMENT',c:'r'},
+  {t:'SG441 ON-TIME — DEPARTED 14:32 UTC',c:'g'},
+  {t:'STAFF ALERT — SECTOR D UNDERSTAFFED',c:'r'},
+  {t:'WEATHER UPDATE — VISIBILITY REDUCED TO 5KM',c:''},
+  {t:'AI203 DELAYED — WEATHER CONDITIONS — ETA +45MIN',c:''},
+  {t:'GATE B12 OCCUPIED — INDIGO 6E-422 BOARDING',c:'g'},
+  {t:'RUNWAY 09L CLEAR — TAXIING AUTHORIZED',c:'g'},
+  {t:'UK147 CONFLICT DETECTED — GATE C5 REASSIGNMENT',c:'r'},
+  {t:'SG441 ON-TIME — DEPARTED 14:32 UTC',c:'g'},
+];
+const AI_FACTS=[
+  {lbl:'Weather Impact',val:85,col:'#FF4D4D'},{lbl:'Traffic Load',val:70,col:'#FFB547'},
+  {lbl:'Staff Readiness',val:60,col:'#FFB547'},{lbl:'Gate Conflicts',val:40,col:'#4ADE80'},
+];
+const FAQ=[
+  {q:'How do I export a report?',a:'Go to Reports → select type & date → click Export PDF/CSV/Excel.'},
+  {q:'How to reassign a gate?',a:'Click any gate cell → select resolve conflict or reassignment.'},
+  {q:'How to activate Storm Protocol?',a:'Click the red STORM PROTOCOL button in the top navbar.'},
+  {q:'Where are staff fatigue alerts?',a:'Staff page shows fatigue bars. Red = critical (needs relief).'},
+];
+const SEARCH_IDX=[
+  ...FLIGHTS.map(f=>({type:'FLIGHT',lbl:`${f.id} → ${f.dest}`,pg:'flights',fn:()=>openFlightMod(f.id)})),
+  ...GATES.map(g=>({type:'GATE',lbl:`Gate ${g.id} — ${g.flight}`,pg:'gates',fn:()=>openGateMod(g.id)})),
+  ...STAFF.map(s=>({type:'STAFF',lbl:`${s.name} — ${s.dept}`,pg:'staff',fn:()=>openStaffMod(s.name)})),
+  {type:'PAGE',lbl:'Weather Systems',pg:'weather',fn:()=>goPage('weather')},
+  {type:'PAGE',lbl:'Analytics Dashboard',pg:'analytics',fn:()=>goPage('analytics')},
+  {type:'PAGE',lbl:'Reports & Export',pg:'reports',fn:()=>goPage('reports')},
+];
+const RECENT_REPS=[
+  {nm:'Daily Ops Briefing — May 10',type:'PDF',when:'09:00'},
+  {nm:'Weekly Performance Report',type:'CSV',when:'Yesterday'},
+  {nm:'Delay Analysis — Week 18',type:'Excel',when:'Mon'},
+  {nm:'Gate Utilization Summary',type:'PDF',when:'Sun'},
+];
+const ACT_LOG=[
+  {t:'14:32',m:'ADMIN: Updated gate C-05 conflict status'},
+  {t:'14:21',m:'SYSTEM: AI-203 delay flag raised automatically'},
+  {t:'14:15',m:'OPS: Staff shortage alert issued for Sector D'},
+  {t:'14:05',m:'ADMIN: Fuel clearance granted for AI-556'},
+  {t:'13:58',m:'ATC: SG-441 taxi clearance logged'},
+  {t:'13:45',m:'SYSTEM: Fatigue threshold exceeded — Mohammed Ali'},
+];
+const MAP_DOTS=[
+  {x:'38%',y:'28%',del:'0s',fid:'AI-203'},{x:'45%',y:'42%',del:'.4s',fid:'6E-422'},
+  {x:'52%',y:'55%',del:'.8s',fid:'SG-441'},{x:'60%',y:'38%',del:'1.2s',fid:'EK-524'},
+  {x:'32%',y:'60%',del:'.6s',fid:'QR-573'},{x:'70%',y:'48%',del:'1s',fid:'UK-147'},
+];
+
+// ═══════════ STATE ═══════════
+let CU=null,isAdmin=false,loginMode='user',emg=false,hlpOpen=false,curPg='dashboard',fFlt='all',nfFlt='all',fbStar=0,readNf=new Set(),alerts=[...ALERTS];
+
+// ═══════════ LOGIN FX ═══════════
+(function initLoginFX(){
+  // Stars
+  for(let i=0;i<100;i++){const s=document.createElement('div');s.className='star';const sz=Math.random()*2+.5;s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*65}%;position:absolute;--d:${2+Math.random()*4}s;--dl:${Math.random()*4}s`;document.getElementById('starsC').appendChild(s)}
+  // Runway
+  const rc=document.getElementById('runwayC');for(let i=0;i<10;i++){const d=document.createElement('div');d.className='rDot';rc.appendChild(d)}
+  // Particles
+  const pc=document.getElementById('ptclC');pc.style.cssText='position:absolute;inset:0;pointer-events:none';
+  for(let i=0;i<25;i++){const p=document.createElement('div');p.className='ptcl';p.style.cssText=`--x:${Math.random()*100}%;--y:${Math.random()*100}%;--d:${3+Math.random()*5}s;--dl:${Math.random()*5}s`;pc.appendChild(p)}
+  // Ticker
+  const tc=document.getElementById('tickC');tc.innerHTML=TICK_DATA.map(i=>`<div class="tItem"><div class="td ${i.c}"></div>${i.t}</div>`).join('');
+})();
+
+function switchTab(m){
+  loginMode=m;
+  document.getElementById('tabU').classList.toggle('on',m==='user');
+  document.getElementById('tabA').classList.toggle('on',m==='admin');
+  const c=m==='user'?CREDS.user:CREDS.admin;
+  document.getElementById('lUser').value=c.id;
+  document.getElementById('lPass').value=c.pass;
+  document.getElementById('errMsg').style.display='none';
+}
+
+function doLogin(){
+  const u=document.getElementById('lUser').value.trim();
+  const p=document.getElementById('lPass').value;
+  const c=loginMode==='admin'?CREDS.admin:CREDS.user;
+  if(u!==c.id||p!==c.pass){document.getElementById('errMsg').style.display='block';return}
+  document.getElementById('errMsg').style.display='none';
+  const btn=document.getElementById('lBtn');btn.disabled=true;btn.textContent='⏳ AUTHENTICATING...';
+  isAdmin=loginMode==='admin';CU=loginMode==='admin'?CREDS.admin:CREDS.user;
+  if(document.getElementById('remMe').checked)localStorage.setItem('aodb_s',JSON.stringify({u:CU,a:isAdmin}));
+  setTimeout(()=>{
+    const lp=document.getElementById('loginPage');lp.style.opacity='0';
+    setTimeout(()=>{lp.style.display='none';launchApp()},700);
+  },1200);
+}
+
+// ═══════════ APP LAUNCH ═══════════
+function launchApp(){
+  const app=document.getElementById('app');app.style.display='flex';
+  document.getElementById('navAv').textContent=CU.name.split(' ').map(n=>n[0]).join('');
+  document.getElementById('navNm').textContent=CU.name;
+  if(isAdmin)document.getElementById('adminSB').style.display='flex';
+  document.getElementById('helpW').style.display='block';
+  document.getElementById('repDate').value=new Date().toISOString().split('T')[0];
+  // Build all pages
+  buildDash();buildRightPanel();buildNfDrop();
+  buildFlightsPage();buildGatesPage();buildStaffPage();buildWxPage();buildAnalytics();
+  buildReports();buildNfPage();buildProfile();buildAdmin();buildFeedback();buildCalendar();buildMiniMapDots();buildChat();
+  startClock();startSim();
+  toast('info','SYSTEM ONLINE','Dashboard connected. All systems nominal.');
+}
+
+// ═══════════ NAVIGATION ═══════════
+function goPage(pg){
+  document.querySelectorAll('.pg').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.sbi').forEach(i=>i.classList.remove('on'));
+  const el=document.getElementById(`pg-${pg}`);
+  if(el)el.classList.add('on');
+  const sb=document.querySelector(`.sbi[data-p="${pg}"]`);
+  if(sb)sb.classList.add('on');
+  curPg=pg;closeAllDps();
+  // Refresh pages that need it
+  if(pg==='profile')buildProfile();
+}
+
+// ═══════════ CLOCK ═══════════
+function startClock(){
+  function tick(){const n=new Date();document.getElementById('nClk').textContent=n.toLocaleTimeString('en-GB',{hour12:false})+' UTC'}
+  tick();setInterval(tick,1000);
+}
+
+// ═══════════ DROPDOWNS ═══════════
+function toggleDp(id){const p=document.getElementById(id);const was=p.classList.contains('open');closeAllDps();if(!was)p.classList.add('open')}
+function closeDp(id){document.getElementById(id).classList.remove('open')}
+function closeAllDps(){document.querySelectorAll('.dp').forEach(p=>p.classList.remove('open'))}
+document.addEventListener('click',e=>{if(!e.target.closest('.dp')&&!e.target.closest('#nfBtn')&&!e.target.closest('#profBtn'))closeAllDps()});
+
+// ═══════════ MODAL ═══════════
+function openMod(title,html){
+  document.getElementById('modT').textContent=title;
+  document.getElementById('modB').innerHTML=html;
+  document.getElementById('mOv').classList.remove('hide');
+}
+function closeMod(e){if(!e||e.target===document.getElementById('mOv'))document.getElementById('mOv').classList.add('hide')}
+
+// ═══════════ TOAST ═══════════
+function toast(lvl,title,msg){
+  const a=document.getElementById('toastArea');
+  const t=document.createElement('div');t.className=`toast ${lvl}`;
+  t.innerHTML=`<div class="toastTit">${title}</div><div class="toastMsg">${msg}</div>`;
+  a.appendChild(t);setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),350)},4200);
+}
+
+// ═══════════ SEARCH ═══════════
+function doSearch(q){
+  const dd=document.getElementById('srchDd');
+  if(q.length<2){dd.classList.remove('open');return}
+  const ql=q.toLowerCase();
+  const res=SEARCH_IDX.filter(d=>d.lbl.toLowerCase().includes(ql)).slice(0,7);
+  if(!res.length){dd.classList.remove('open');return}
+  dd.innerHTML=res.map((r,i)=>`<div class="srRes" onclick="SEARCH_IDX[${SEARCH_IDX.indexOf(r)}].fn();closeSrch()"><span class="srType">${r.type}</span><span class="srTxt">${hl(r.lbl,ql)}</span></div>`).join('');
+  dd.classList.add('open');
+}
+function hl(txt,q){return txt.replace(new RegExp(`(${q})`,'gi'),'<mark>$1</mark>')}
+function closeSrch(){document.getElementById('srchDd').classList.remove('open')}
+
+// ═══════════ EMERGENCY ═══════════
+function toggleEmg(){
+  emg=!emg;
+  document.getElementById('app').classList.toggle('eMode',emg);
+  document.querySelector('.eBrd').style.display=emg?'block':'none';
+  const btn=document.getElementById('stormBtn');
+  if(emg){
+    btn.innerHTML='✅ DEACTIVATE PROTOCOL';btn.classList.add('active');
+    toast('critical','⚡ STORM PROTOCOL','Emergency mode activated. All gates on standby.');
+    addAlert({type:'⚡ EMERGENCY',msg:'STORM PROTOCOL ACTIVATED — All flights on standby.',time:nowT(),level:'critical'});
+  }else{
+    btn.innerHTML='⚡ STORM PROTOCOL';btn.classList.remove('active');
+    toast('success','PROTOCOL DEACTIVATED','Normal operations resumed.');
+  }
+}
+
+// ═══════════ DASHBOARD ═══════════
+function buildDash(){
+  // KPI
+  const kg=document.getElementById('kpiGrid');
+  kg.innerHTML=KPIS.map((k,i)=>`<div class="kpiC" onclick="goPage('${k.pg}')" style="animation-delay:${i*.08}s"><span class="kpiIco" style="color:${k.col}">${k.icon}</span><div class="kpiV" data-t="${typeof k.val==='number'?k.val:''}" style="color:${k.col}">${k.val}</div><div class="kpiL">${k.lbl}</div><div class="kpiTr ${k.tc}">${k.trend}</div><div class="mBar"><div class="mBarF" style="width:${k.fill}%;background:${k.col}"></div></div></div>`).join('');
+  animCntrs();
+  // Flight table
+  buildFT('dashFtbody',FLIGHTS.slice(0,8),false);
+  // AI factors
+  document.getElementById('aiFactors').innerHTML=AI_FACTS.map(f=>`<div class="aiFact"><span>${f.lbl}</span><div class="aiFBar"><div style="height:100%;width:${f.val}%;background:${f.col};border-radius:2px;animation:fillIn 1.5s ease-out"></div></div><span style="font-family:'Share Tech Mono';font-size:9px;color:${f.col}">${f.val}%</span></div>`).join('');
+  // Gates
+  buildGGrid('dashGates',GATES.slice(0,12));
+  // Weather
+  document.getElementById('dashWMets').innerHTML=WX.slice(0,4).map(m=>`<div class="wM"><div class="wV" style="color:${m.col}">${m.val}</div><div class="wLb">${m.lbl}</div></div>`).join('');
+  // Staff
+  document.getElementById('dashStaff').innerHTML=STAFF.slice(0,4).map(stRow).join('');
+  // Heatmap
+  buildHeatmap('dashHeatmap');
+}
+
+function animCntrs(){
+  document.querySelectorAll('.kpiV[data-t]').forEach(el=>{
+    const t=parseInt(el.dataset.t);
+    if(!isNaN(t)&&t>0){let s=0;const inc=Math.ceil(t/40);const ti=setInterval(()=>{s=Math.min(s+inc,t);el.textContent=s;if(s>=t)clearInterval(ti)},30)}
+  });
+}
+
+// ═══════════ FLIGHT TABLE BUILDER ═══════════
+const SMAP={boarding:'sB',delayed:'sD',conflict:'sCo',taxiing:'sT2',departed:'sDp',scheduled:'sSc'};
+function buildFT(tbodyId,data,extended){
+  const tb=document.getElementById(tbodyId);if(!tb)return;
+  tb.innerHTML=data.map((f,i)=>{
+    const cc=f.crew>=90?'var(--green)':f.crew>=70?'var(--amber)':'var(--red)';
+    const base=`<td><span class="fId">${f.id}</span></td><td>${f.airline}</td>`;
+    const ext=extended?`<td style="color:var(--txt3)">${f.origin}</td>`:'';
+    const mid=`<td><span style="color:var(--cyan);font-family:'Share Tech Mono'">${f.gate}</span></td>`;
+    const gate=extended?`${mid}<td><span class="sp ${SMAP[f.status]||'sDp'}">${f.status.toUpperCase()}</span></td><td style="font-family:'Share Tech Mono';font-size:12px">${f.dep}</td>`:
+      `<td>${f.dest}</td>${mid}<td><span class="sp ${SMAP[f.status]||'sDp'}">${f.status.toUpperCase()}</span></td>`;
+    const delay=`<td style="color:${f.delay==='—'?'var(--txt3)':'var(--amber)'}">${f.delay}</td>`;
+    const crew=`<td><div class="crBar"><div class="crTr"><div class="crFl" style="width:${f.crew}%;background:${cc}"></div></div><span style="font-family:'Share Tech Mono';font-size:9px;color:${cc}">${f.crew}%</span></div></td>`;
+    const acType=extended?`<td style="font-family:'Share Tech Mono';font-size:11px;color:var(--txt3)">${f.ac}</td>`:'';
+    const dest=extended?`<td>${f.dest}</td>`:'';
+    return `<tr onclick="openFlightMod('${f.id}')" style="animation-delay:${i*.06}s">${base}${ext}${dest}${gate}${delay}${crew}${acType}</tr>`;
+  }).join('');
+}
+
+function buildGGrid(id,data){
+  const el=document.getElementById(id);if(!el)return;
+  const cls={boarding:'gBrd',occupied:'gOcc',conflict:'gCon',empty:'gEm'};
+  el.innerHTML=data.map(g=>`<div class="gCell ${cls[g.status]||'gEm'}" onclick="openGateMod('${g.id}')"><div class="gL">${g.id}</div><div class="gF">${g.flight}</div><div class="gBar"><div class="gBarF" style="width:${g.occ}%"></div></div>${g.status==='conflict'?'<span class="gCBdg">⚠</span>':''}</div>`).join('');
+}
+
+function stRow(s){
+  const fc=s.fatigue>=80?'#FF4D4D':s.fatigue>=60?'#FFB547':'#4ADE80';
+  const sc=s.status==='available'?'stA':s.status==='break'?'stBr':'stCr';
+  return `<div class="stRow" onclick="openStaffMod('${s.name}')"><div class="stAv" style="background:${s.color}22;border:1px solid ${s.color}44;color:${s.color}">${s.name.split(' ').map(n=>n[0]).join('')}</div><div style="flex:1"><div class="stNm">${s.name}</div><div class="stDp">${s.dept} • ${s.shift}</div></div><div class="fatWr"><div class="fatL"><span>FAT</span><span style="color:${fc}">${s.fatigue}%</span></div><div class="fatB"><div class="fatBF" style="width:${s.fatigue}%;background:${fc}"></div></div></div><span class="stSt ${sc}">${s.status.toUpperCase()}</span></div>`;
+}
+
+function buildHeatmap(id){
+  const el=document.getElementById(id);if(!el)return;
+  const hmCol=v=>v<.33?`rgba(74,222,128,${.3+v*.5})`:v<.66?`rgba(255,181,71,${.3+v*.5})`:`rgba(255,77,77,${.3+v*.6})`;
+  el.innerHTML=`<div class="hmTimes">${HM_TIMES.map(t=>`<div class="hmTL">${t}:00</div>`).join('')}</div>`+
+    HM_ROWS.map((row,ri)=>`<div class="hmRow"><span class="hmLbl">${row}</span>${HM_VALS[ri].map((v,ci)=>`<div class="hmCell" style="background:${hmCol(v)}" title="${row} @ ${HM_TIMES[ci]}:00 — ${v>=.66?'CRITICAL':v>=.33?'MODERATE':'SMOOTH'}" onclick="toast('info','Heatmap: ${row} @ ${HM_TIMES[ci]}:00','Delay severity: ${v>=.66?'CRITICAL':v>=.33?'MODERATE':'SMOOTH'}')"></div>`).join('')}</div>`).join('');
+}
+
+// ═══════════ RIGHT PANEL ═══════════
+function buildRightPanel(){
+  const el=document.getElementById('rAlList');
+  el.innerHTML=alerts.map((a,i)=>`<div class="alCard ${a.level}" style="animation-delay:${i*.07}s" onclick="openAlertMod(${i})"><div class="alH"><div class="alDot"></div><span class="alT">${a.type}</span><span class="alTime">${a.time}</span></div><div class="alMsg">${a.msg}</div></div>`).join('');
+  document.getElementById('rpCnt').textContent=alerts.filter(a=>a.level==='critical').length;
+}
+function addAlert(a){alerts.unshift(a);buildRightPanel();buildNfDrop();buildNfPage();document.getElementById('rpCnt').textContent=alerts.filter(a=>a.level==='critical').length}
+
+// ═══════════ NOTIFICATIONS ═══════════
+function buildNfDrop(){
+  document.getElementById('nfList').innerHTML=alerts.slice(0,5).map((a,i)=>`<div class="nfItem ${a.level}${readNf.has(i)?' read':''}" onclick="markRead(${i})"><span class="nfType">${a.type}</span><div class="nfMsg">${a.msg}</div><div class="nfTime">${a.time}</div></div>`).join('');
+  document.getElementById('nBdg').style.display=alerts.some((_,i)=>!readNf.has(i))?'block':'none';
+}
+function markRead(i){readNf.add(i);buildNfDrop()}
+function markAllRead(){alerts.forEach((_,i)=>readNf.add(i));buildNfDrop()}
+
+// ═══════════ FLIGHTS PAGE ═══════════
+function buildFlightsPage(){renderFlights()}
+function filterF(f){fFlt=f;renderFlights()}
+function renderFlights(){
+  const data=fFlt==='all'?FLIGHTS:FLIGHTS.filter(f=>f.status===fFlt);
+  buildFT('flightsTbody',data,true);
+}
+
+// ═══════════ GATES PAGE ═══════════
+function buildGatesPage(){
+  buildGGrid('gatesGrid',GATES);
+  // Timeline
+  document.getElementById('gateTL').innerHTML=GATES.filter(g=>g.flight!=='—').map(g=>{
+    const cl=g.status==='conflict'?'var(--red)':g.status==='boarding'?'var(--cyan)':'var(--green)';
+    return `<div style="display:flex;align-items:center;gap:9px;margin-bottom:8px"><span style="font-family:'Share Tech Mono';font-size:10px;color:var(--txt3);width:35px">${g.id}</span><div style="flex:1;height:18px;background:rgba(0,0,0,.25);border-radius:4px;overflow:hidden"><div style="height:100%;width:${g.occ}%;background:${cl};border-radius:4px;display:flex;align-items:center;padding-left:6px"><span style="font-family:'Share Tech Mono';font-size:9px;color:rgba(0,0,0,.8)">${g.flight}</span></div></div><span style="font-family:'Share Tech Mono';font-size:9px;color:${cl};width:30px">${g.occ}%</span></div>`;
+  }).join('');
+  // Conflicts
+  const conf=GATES.filter(g=>g.status==='conflict');
+  document.getElementById('gateConf').innerHTML=conf.length?conf.map(g=>`<div style="display:flex;align-items:center;gap:12px;padding:12px;background:var(--red-dim);border:1px solid rgba(255,77,77,.25);border-radius:7px;margin-bottom:8px"><span style="font-size:18px;animation:bR .6s infinite">⚠</span><div style="flex:1"><div style="font-family:'Orbitron',monospace;font-size:11px;color:var(--red);margin-bottom:2px">CONFLICT — GATE ${g.id}</div><div style="font-size:12px;color:var(--txt2)">Flight ${g.flight} has a schedule overlap. Reassignment required.</div></div><button onclick="toast('success','GATE RESOLVED','Gate ${g.id} conflict cleared.');this.closest('div').style.display='none'" style="padding:6px 12px;background:rgba(255,77,77,.2);border:1px solid rgba(255,77,77,.4);border-radius:5px;color:var(--red);font-family:'Orbitron',monospace;font-size:8px;cursor:pointer;letter-spacing:1px">RESOLVE</button></div>`).join(''):`<div style="color:var(--txt3);font-size:13px;padding:12px">✅ No gate conflicts detected</div>`;
+}
+
+// ═══════════ STAFF PAGE ═══════════
+function buildStaffPage(){document.getElementById('staffAll').innerHTML=STAFF.map(stRow).join('')}
+
+// ═══════════ WEATHER PAGE ═══════════
+function buildWxPage(){
+  document.getElementById('wxFull').innerHTML=WX.map(m=>`<div class="wM"><div class="wV" style="color:${m.col}">${m.val}</div><div class="wLb">${m.lbl}</div></div>`).join('');
+  const alts=['FL350','FL280','FL180','FL100','Surface'];
+  const turbVals=[.7,.4,.2,.6,.3];
+  document.getElementById('turbFC').innerHTML=alts.map((a,i)=>{
+    const v=turbVals[i];const c=v>=.6?'var(--red)':v>=.35?'var(--amber)':'var(--green)';const lbl=v>=.6?'SEVERE':v>=.35?'MODERATE':'LIGHT';
+    return `<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px"><span style="font-family:'Share Tech Mono';font-size:10px;color:var(--txt3);width:58px">${a}</span><div style="flex:1;height:12px;background:rgba(0,0,0,.25);border-radius:3px;overflow:hidden"><div style="height:100%;width:${v*100}%;background:${c};border-radius:3px;animation:fillIn 1.2s ease-out"></div></div><span style="font-family:'Orbitron',monospace;font-size:8px;color:${c};width:55px">${lbl}</span></div>`;
+  }).join('');
+}
+
+// ═══════════ ANALYTICS ═══════════
+function buildAnalytics(){
+  const days=['M','T','W','T','F','S','S'];const vals=[118,142,135,160,148,95,80];const mx=Math.max(...vals);
+  document.getElementById('anaBar').innerHTML=vals.map((v,i)=>{const h=Math.round(v/mx*148);const c=v>=150?'var(--red)':v>=130?'var(--amber)':'var(--cyan)';return `<div class="cBar" style="height:${h}px;background:${c};opacity:.8" data-v="${v}"></div>`}).join('');
+  document.getElementById('anaBarX').innerHTML=days.map(d=>`<div class="cXL">${d}</div>`).join('');
+  const otp=[78,80,82,79,84,86,83,85,87,84,82,84,86,88];
+  const pts=otp.map((v,i)=>`${(i/(otp.length-1))*300},${100-(v-70)*5}`);
+  document.getElementById('lineC').innerHTML=`<polyline points="${pts.join(' ')}" fill="none" stroke="var(--cyan)" stroke-width="2"/>${pts.map(p=>`<circle cx="${p.split(',')[0]}" cy="${p.split(',')[1]}" r="3" fill="var(--cyan)"/>`).join('')}`;
+}
+
+// ═══════════ REPORTS ═══════════
+function buildReports(){
+  document.getElementById('recReports').innerHTML=RECENT_REPS.map(r=>`<div onclick="toast('info','OPENING REPORT','Loading ${r.nm}...')" style="display:flex;align-items:center;gap:9px;padding:10px 12px;background:rgba(0,217,255,.03);border:1px solid rgba(0,217,255,.1);border-radius:7px;cursor:pointer;transition:all .2s;margin-bottom:7px" onmouseover="this.style.background='rgba(0,217,255,.07)'" onmouseout="this.style.background='rgba(0,217,255,.03)'"><span style="font-size:18px">${r.type==='PDF'?'📄':r.type==='CSV'?'📊':'📋'}</span><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--txt)">${r.nm}</div><div style="font-size:11px;color:var(--txt3)">${r.type} • ${r.when}</div></div><span style="font-size:11px;color:var(--cyan)">↓</span></div>`).join('');
+}
+function exportRep(type){toast('success','REPORT GENERATED',`${document.getElementById('repType').options[document.getElementById('repType').selectedIndex].text} exported as ${type}.`)}
+
+// ═══════════ NOTIFICATIONS PAGE ═══════════
+function buildNfPage(){document.getElementById('allNfCnt').textContent=`${alerts.length} ALERTS`;renderNfList()}
+function filterNf(f){nfFlt=f;renderNfList()}
+function renderNfList(){
+  const data=nfFlt==='all'?alerts:alerts.filter(a=>a.level===nfFlt);
+  document.getElementById('allNfList').innerHTML=data.length?data.map((a,i)=>`<div class="alCard ${a.level}" style="margin-bottom:8px" onclick="openAlertMod(${alerts.indexOf(a)})"><div class="alH"><div class="alDot"></div><span class="alT">${a.type}</span><span class="alTime">${a.time}</span></div><div class="alMsg">${a.msg}</div></div>`).join(''):`<div style="color:var(--txt3);font-size:13px;padding:14px;text-align:center">No ${nfFlt} alerts</div>`;
+}
+
+// ═══════════ PROFILE ═══════════
+function buildProfile(){
+  if(!CU)return;
+  document.getElementById('editNm').value=CU.name;
+  document.getElementById('editEm').value=CU.email;
+  document.getElementById('profPageCard').innerHTML=`<div class="profBigAv">${CU.name.split(' ').map(n=>n[0]).join('')}</div><div class="profNm">${CU.name}</div><div class="profRl">${CU.role}</div><div style="width:100%;display:flex;flex-direction:column;gap:6px;margin-top:8px"><div class="pFld"><span class="pFL">EMAIL</span><span class="pFV">${CU.email}</span></div><div class="pFld"><span class="pFL">ROLE</span><span class="pFV">${CU.role}</span></div><div class="pFld"><span class="pFL">ACCESS LEVEL</span><span class="pFV" style="color:var(--${isAdmin?'red':'cyan'})">${isAdmin?'ADMIN — LEVEL 5':'OPERATOR — LEVEL 4'}</span></div><div class="pFld"><span class="pFL">STATUS</span><span class="pFV" style="color:var(--green)">● ACTIVE</span></div><div class="pFld"><span class="pFL">AIRPORT</span><span class="pFV">HYD Rajiv Gandhi Intl</span></div></div>`;
+}
+function saveProfChg(){
+  CU.name=document.getElementById('editNm').value;
+  CU.email=document.getElementById('editEm').value;
+  document.getElementById('navAv').textContent=CU.name.split(' ').map(n=>n[0]).join('');
+  document.getElementById('navNm').textContent=CU.name;
+  buildProfile();toast('success','PROFILE UPDATED','Your changes have been saved.');
+}
+
+// ═══════════ ADMIN ═══════════
+function buildAdmin(){
+  document.getElementById('admCards').innerHTML=[
+    {ico:'✈',lbl:'FLIGHT MGMT',sub:'Edit & update flights',pg:'flights'},
+    {ico:'🏢',lbl:'GATE CONTROL',sub:'Assign & reassign gates',pg:'gates'},
+    {ico:'👥',lbl:'STAFF MGMT',sub:'Roster & shift management',pg:'staff'},
+    {ico:'🌧',lbl:'WEATHER CTRL',sub:'Storm protocol controls',pg:'weather'},
+    {ico:'📊',lbl:'ANALYTICS',sub:'Full operational data',pg:'analytics'},
+    {ico:'📋',lbl:'REPORTS',sub:'Export & schedule',pg:'reports'},
+  ].map(c=>`<div class="admC" onclick="goPage('${c.pg}')"><span class="admCIco">${c.ico}</span><div class="admCL">${c.lbl}</div><div class="admCS">${c.sub}</div></div>`).join('');
+  document.getElementById('admFTbody').innerHTML=FLIGHTS.slice(0,6).map(f=>`<tr><td><span class="fId">${f.id}</span></td><td><span class="sp ${SMAP[f.status]||'sDp'}">${f.status.toUpperCase()}</span></td><td style="color:var(--cyan)">${f.gate}</td><td style="color:var(--amber)">${f.delay}</td><td><button onclick="toast('success','UPDATED','${f.id} updated.')" style="padding:3px 8px;background:var(--cyan-dim);border:1px solid var(--bdr2);border-radius:4px;color:var(--cyan);font-family:'Orbitron',monospace;font-size:7px;cursor:pointer;letter-spacing:1px">EDIT</button></td></tr>`).join('');
+  document.getElementById('admActLog').innerHTML=ACT_LOG.map(a=>`<div class="actI"><span class="actT">${a.t}</span><span class="actM">${a.m}</span></div>`).join('');
+}
+
+// ═══════════ FEEDBACK ═══════════
+function buildFeedback(){
+  document.getElementById('faqList').innerHTML=FAQ.map((f,i)=>`<div style="margin-bottom:8px;border:1px solid var(--bdr);border-radius:7px;overflow:hidden"><div style="padding:10px 12px;cursor:pointer;font-family:'Rajdhani',sans-serif;font-size:13px;font-weight:600;color:var(--txt2);display:flex;justify-content:space-between" onclick="const d=document.getElementById('fq${i}');d.style.display=d.style.display==='block'?'none':'block';this.children[1].textContent=d.style.display==='block'?'−':'+'"><span>${f.q}</span><span style="color:var(--cyan)">+</span></div><div id="fq${i}" style="display:none;padding:0 12px 10px;font-size:12px;color:var(--txt3)">${f.a}</div></div>`).join('');
+}
+function rateStar(n){fbStar=n;document.querySelectorAll('.sStar').forEach((s,i)=>s.classList.toggle('on',i<n))}
+function submitFB(){
+  if(!fbStar){toast('warning','RATING REQUIRED','Please select a star rating.');return}
+  if(!document.getElementById('fbTxt').value.trim()){toast('warning','FEEDBACK EMPTY','Please enter your feedback.');return}
+  document.getElementById('fbFormWr').style.display='none';
+  document.getElementById('fbOK').style.display='block';
+  toast('success','FEEDBACK SUBMITTED','Thank you for your feedback!');
+  setTimeout(()=>{document.getElementById('fbFormWr').style.display='block';document.getElementById('fbOK').style.display='none';document.getElementById('fbTxt').value='';fbStar=0;document.querySelectorAll('.sStar').forEach(s=>s.classList.remove('on'))},5000);
+}
+
+// ═══════════ CALENDAR ═══════════
+function buildCalendar(){
+  const now=new Date();const y=now.getFullYear();const m=now.getMonth();
+  const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const days=['Su','Mo','Tu','We','Th','Fr','Sa'];
+  const first=new Date(y,m,1).getDay();const dim=new Date(y,m+1,0).getDate();
+  let h=`<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><span style="font-family:'Orbitron',monospace;font-size:11px;font-weight:700;color:var(--cyan)">${mNames[m]} ${y}</span><span style="font-size:11px;color:var(--txt3)">SELECT OPERATIONAL DATE</span></div>`;
+  h+=`<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px">${days.map(d=>`<div style="text-align:center;font-family:'Share Tech Mono';font-size:9px;color:var(--txt3)">${d}</div>`).join('')}</div>`;
+  h+='<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px">';
+  for(let i=0;i<first;i++)h+='<div></div>';
+  for(let d=1;d<=dim;d++){const isT=d===now.getDate();h+=`<div onclick="toast('info','DATE SELECTED','Historical data for ${d}/${m+1}/${y} loading...')" style="text-align:center;padding:6px 0;font-family:'Share Tech Mono';font-size:11px;cursor:pointer;border-radius:4px;background:${isT?'rgba(0,217,255,.15)':'transparent'};color:${isT?'var(--cyan)':'var(--txt2)'};border:${isT?'1px solid rgba(0,217,255,.3)':'1px solid transparent'};transition:all .2s" onmouseover="this.style.background='rgba(0,217,255,.08)'" onmouseout="this.style.background='${isT?'rgba(0,217,255,.15)':'transparent'}'">${d}</div>`}
+  h+='</div>';
+  document.getElementById('calWr').innerHTML=h;
+}
+
+// ═══════════ MINI MAP ═══════════
+function buildMiniMapDots(){
+  const el=document.getElementById('mapDots');
+  el.style.cssText='position:absolute;inset:0';
+  MAP_DOTS.forEach(d=>{
+    const dot=document.createElement('div');dot.className='fDot';dot.style.cssText=`left:${d.x};top:${d.y};--del:${d.del}`;
+    dot.title=d.fid;dot.onclick=()=>openFlightMod(d.fid);
+    el.appendChild(dot);
+  });
+}
+
+// ═══════════ HELP CHAT ═══════════
+function buildChat(){
+  const ca=document.getElementById('chatArea');
+  const m=document.createElement('div');m.className='cMsg sys';m.innerHTML=`Hello! I'm OPS Support. How can I help?<div class="cTime">${nowT()}</div>`;ca.appendChild(m);
+}
+function toggleHelp(){hlpOpen=!hlpOpen;document.getElementById('helpPanel').classList.toggle('open',hlpOpen)}
+function sendChat(){
+  const inp=document.getElementById('chatInp');const txt=inp.value.trim();if(!txt)return;
+  const ca=document.getElementById('chatArea');
+  const um=document.createElement('div');um.className='cMsg usr';um.innerHTML=`${txt}<div class="cTime">${nowT()}</div>`;ca.appendChild(um);inp.value='';ca.scrollTop=ca.scrollHeight;
+  const rs=['Your request has been logged. An operator will assist shortly.','I understand. Let me check that for you.','This issue has been escalated to the duty manager.','Please check the Notifications panel for real-time updates.'];
+  setTimeout(()=>{const sm=document.createElement('div');sm.className='cMsg sys';sm.innerHTML=`${rs[Math.floor(Math.random()*rs.length)]}<div class="cTime">${nowT()}</div>`;ca.appendChild(sm);ca.scrollTop=ca.scrollHeight},900);
+}
+
+// ═══════════ DETAIL MODALS ═══════════
+function openFlightMod(id){
+  const f=FLIGHTS.find(f=>f.id===id);if(!f)return;
+  openMod(`✈ FLIGHT ${f.id}`,`<div class="dGrid"><div class="dItem"><div class="dLbl">AIRLINE</div><div class="dVal">${f.airline}</div></div><div class="dItem"><div class="dLbl">AIRCRAFT</div><div class="dVal">${f.ac}</div></div><div class="dItem"><div class="dLbl">ORIGIN</div><div class="dVal">${f.origin}</div></div><div class="dItem"><div class="dLbl">DESTINATION</div><div class="dVal">${f.dest}</div></div><div class="dItem"><div class="dLbl">GATE</div><div class="dVal" style="color:var(--cyan)">${f.gate}</div></div><div class="dItem"><div class="dLbl">DEPARTURE</div><div class="dVal">${f.dep}</div></div><div class="dItem"><div class="dLbl">STATUS</div><div class="dVal"><span class="sp ${SMAP[f.status]||'sDp'}">${f.status.toUpperCase()}</span></div></div><div class="dItem"><div class="dLbl">DELAY</div><div class="dVal" style="color:${f.delay==='—'?'var(--green)':'var(--amber)'}">${f.delay}</div></div><div class="dItem"><div class="dLbl">ALTITUDE</div><div class="dVal">${f.alt}</div></div><div class="dItem"><div class="dLbl">SPEED</div><div class="dVal">${f.spd}</div></div></div><div class="dItem" style="margin-bottom:12px"><div class="dLbl">CREW READINESS</div><div style="display:flex;align-items:center;gap:10px;margin-top:6px"><div style="flex:1;height:6px;background:rgba(255,255,255,.05);border-radius:3px;overflow:hidden"><div style="height:100%;width:${f.crew}%;background:${f.crew>=80?'var(--green)':'var(--amber)'};border-radius:3px"></div></div><span style="font-family:'Share Tech Mono';font-size:13px;color:${f.crew>=80?'var(--green)':'var(--amber)'}">${f.crew}%</span></div></div>${isAdmin?`<button onclick="toast('success','UPDATED','${f.id} has been updated.');closeMod()" style="width:100%;padding:10px;background:var(--cyan-dim);border:1px solid var(--bdr2);border-radius:7px;color:var(--cyan);font-family:'Orbitron',monospace;font-size:10px;cursor:pointer;letter-spacing:2px">✏ EDIT FLIGHT DATA</button>`:''}`)
+}
+function openGateMod(id){
+  const g=GATES.find(g=>g.id===id);if(!g)return;
+  const cls={boarding:'sB',occupied:'sB',conflict:'sCo',empty:'sDp'};
+  openMod(`🏢 GATE ${g.id}`,`<div class="dGrid"><div class="dItem"><div class="dLbl">GATE</div><div class="dVal" style="color:var(--cyan)">${g.id}</div></div><div class="dItem"><div class="dLbl">FLIGHT</div><div class="dVal">${g.flight}</div></div><div class="dItem"><div class="dLbl">STATUS</div><div class="dVal"><span class="sp ${cls[g.status]||'sDp'}">${g.status.toUpperCase()}</span></div></div><div class="dItem"><div class="dLbl">OCCUPANCY</div><div class="dVal" style="color:${g.occ>80?'var(--red)':'var(--green)'}">${g.occ}%</div></div></div>${g.status==='conflict'?`<div style="padding:12px;background:var(--red-dim);border:1px solid rgba(255,77,77,.25);border-radius:7px;margin-bottom:12px"><div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--red);margin-bottom:3px">⚠ CONFLICT DETECTED</div><div style="font-size:12px;color:var(--txt2)">Two flights scheduled simultaneously. Manual reassignment required.</div></div><button onclick="toast('success','RESOLVED','Gate ${g.id} conflict cleared.');closeMod()" style="width:100%;padding:10px;background:var(--red-dim);border:1px solid rgba(255,77,77,.28);border-radius:7px;color:var(--red);font-family:'Orbitron',monospace;font-size:10px;cursor:pointer;letter-spacing:2px">⚡ RESOLVE CONFLICT</button>`:''}`);
+}
+function openStaffMod(name){
+  const s=STAFF.find(s=>s.name===name);if(!s)return;
+  const fc=s.fatigue>=80?'var(--red)':s.fatigue>=60?'var(--amber)':'var(--green)';
+  openMod(`👤 ${s.name}`,`<div class="dGrid"><div class="dItem"><div class="dLbl">DEPARTMENT</div><div class="dVal">${s.dept}</div></div><div class="dItem"><div class="dLbl">SHIFT</div><div class="dVal">${s.shift}</div></div><div class="dItem"><div class="dLbl">STATUS</div><div class="dVal" style="color:${s.status==='available'?'var(--green)':s.status==='break'?'var(--amber)':'var(--red)'}">${s.status.toUpperCase()}</div></div><div class="dItem"><div class="dLbl">FATIGUE</div><div class="dVal" style="color:${fc}">${s.fatigue}%</div></div></div>${s.fatigue>=80?`<div style="padding:10px;background:var(--red-dim);border:1px solid rgba(255,77,77,.25);border-radius:7px;margin-bottom:12px"><div style="font-family:'Orbitron',monospace;font-size:10px;color:var(--red)">⚠ CRITICAL FATIGUE — RELIEF REQUIRED</div></div><button onclick="toast('success','RELIEF DISPATCHED','Relief officer dispatched for ${s.name}.');closeMod()" style="width:100%;padding:10px;background:var(--red-dim);border:1px solid rgba(255,77,77,.28);border-radius:7px;color:var(--red);font-family:'Orbitron',monospace;font-size:10px;cursor:pointer;letter-spacing:2px">📞 DISPATCH RELIEF</button>`:''}`);
+}
+function openAlertMod(i){
+  const a=alerts[i];if(!a)return;
+  openMod(a.type,`<div class="alCard ${a.level}" style="margin-bottom:14px"><div class="alH"><div class="alDot"></div><span class="alT">${a.type}</span><span class="alTime">${a.time}</span></div><div class="alMsg" style="font-size:14px;margin-top:6px">${a.msg}</div></div><button onclick="toast('success','ACKNOWLEDGED','Alert acknowledged.');closeMod()" style="width:100%;padding:10px;background:var(--cyan-dim);border:1px solid var(--bdr2);border-radius:7px;color:var(--cyan);font-family:'Orbitron',monospace;font-size:10px;cursor:pointer;letter-spacing:2px">✓ ACKNOWLEDGE ALERT</button>`);
+}
+
+// ═══════════ LOGOUT ═══════════
+function doLogout(){
+  localStorage.removeItem('aodb_s');
+  const app=document.getElementById('app');app.style.transition='opacity .5s';app.style.opacity='0';
+  setTimeout(()=>{
+    app.style.display='none';app.style.opacity='1';
+    const lp=document.getElementById('loginPage');lp.style.display='flex';lp.style.opacity='0';
+    requestAnimationFrame(()=>{lp.style.transition='opacity .5s';lp.style.opacity='1'});
+    document.getElementById('lBtn').disabled=false;document.getElementById('lBtn').textContent='✈  AUTHORIZE ACCESS';
+    document.getElementById('lUser').value='OPS_2847';document.getElementById('lPass').value='';
+    CU=null;isAdmin=false;emg=false;alerts=[...ALERTS];
+    document.getElementById('app').classList.remove('eMode');
+  },500);
+}
+
+// ═══════════ SIMULATION ═══════════
+function startSim(){
+  // AI risk
+  setInterval(()=>{
+    const r=65+Math.floor(Math.random()*20);
+    const el=document.getElementById('aiRiskVal');if(el)el.textContent=r+'%';
+    const b=document.getElementById('rBarF');if(b)b.style.width=r+'%';
+  },6000);
+  // Weather temp
+  setInterval(()=>{const t=27+Math.floor(Math.random()*3);const el=document.getElementById('wTemp');if(el)el.textContent=t+'°C'},15000);
+  // Periodic toasts
+  const msgs=[
+    {l:'warning',t:'GATE UPDATE',m:'Gate A-08 now available for assignment.'},
+    {l:'critical',t:'DELAY ALERT',m:'6E-817 departure delayed by 10 minutes.'},
+    {l:'info',t:'ATC CLEARANCE',m:'Runway 27R cleared for departures.'},
+    {l:'success',t:'ON TIME',m:'EK-524 departed on schedule.'},
+  ];
+  let mi=0;setInterval(()=>{const m=msgs[mi%msgs.length];toast(m.l,m.t,m.m);mi++},22000);
+}
+
+// ═══════════ UTILS ═══════════
+function nowT(){return new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}
+
+// ═══════════ INIT ═══════════
+// Session restore
+try{
+  const saved=localStorage.getItem('aodb_s');
+  if(saved){const s=JSON.parse(saved);CU=s.u;isAdmin=s.a;document.getElementById('loginPage').style.display='none';launchApp()}
+}catch(e){localStorage.removeItem('aodb_s')}
+</script>
+</body>
+</html>
